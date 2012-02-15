@@ -16,7 +16,7 @@ SparseMatrix::SparseMatrix(int nrows, int ncolmax) {
 	// Too lazy for ton of checks
 	// if null pointer exception on
 	// this line then allocation failed
-	this->count[0] = 1.0;
+	this->count[0] = 1;
 }
 
 SparseMatrix::SparseMatrix(int nrows) {
@@ -34,7 +34,7 @@ SparseMatrix::SparseMatrix(int nrows) {
 	// Too lazy for ton of checks
 	// if null pointer exception on
 	// this line then allocation failed
-	this->count[0] = 1.0;
+	this->count[0] = 1;
 }
 
 SparseMatrix::SparseMatrix(const SparseMatrix& other) {
