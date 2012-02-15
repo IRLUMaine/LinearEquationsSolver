@@ -1,18 +1,32 @@
 TARGET=jacobi_solve
-OBJS=jacobi_solve.o
-CFLAGS=-O2 -Wall
+SRCS=JacobiSolve.cpp \
+	Matrix/SparseMatrix.cpp \
+	Matrix/SparseRow.cpp\
+	Communication/Thread.cpp
+OBJDIR=objs
+OBJS=$(patsubst %.cpp,$(OBJDIR)/%.o,$(SRCS))
+BUILDDIR= objs/Matrix\
+		  objs/Communication
+CFLAGS=-O2 -g#-Wall
 NFLAGS=$(CFLAGS) -arch sm_20
+LIBS=-lpthread
 NVCC=nvcc
-LIBS=
 
 .PHONY:all clean
 all:$(TARGET)
 
 $(TARGET):$(OBJS)
-	$(CXX) -o $(TARGET) $(CFLAGS) $(OBJS) $(LIBS)
+	$(NVCC) -o $(TARGET) $(CFLAGS) $(OBJS) $(LIBS)
 
-%.o : %.cu
-	$(NVCC) -c -o $@ $(NFLAGS)
+$(OBJDIR)/%.o : %.cpp
+	$(NVCC) -c -o $@ $(NFLAGS) $<
+
+$(OBJDIR)/%.o : %.c
+	$(NVCC) -c -o $@ $(NFLAGS) $<
+
+$(OBJDIR)/%.o : %.cu
+	$(NVCC) -c -o $@ $(NFLAGS) $<
 
 clean:
-	rm -f *.o core* $(TARGET)
+	rm -rf $(OBJDIR)/* core* $(TARGET)
+	mkdir $(BUILDDIR)
