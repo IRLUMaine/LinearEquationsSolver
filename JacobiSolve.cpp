@@ -7,7 +7,7 @@ using namespace std;
 
 int main(int argc, char * argv[])
 {
-	FastookReader reader("matrix");
+	FastookReader reader("matrix.file");
 	Matrix *A, *x, *b;
 	Matrix c(1, 1);
 	const void *p = "Hello Thread";
