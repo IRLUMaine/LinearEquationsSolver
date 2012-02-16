@@ -76,6 +76,8 @@ public:
 	}
 
 	Matrix operator+(Matrix &other) {
+		int nrow = getWidth();
+		int ncol = getHeight();
 		Matrix matrix(nrow, ncol);
 
 		for (int i = 0; i < nrow; i++) {
@@ -88,6 +90,8 @@ public:
 	}
 
 	Matrix operator-(Matrix &other) {
+		int nrow = getWidth();
+		int ncol = getHeight();
 		Matrix matrix(nrow, ncol);
 
 		for (int i = 0; i < nrow; i++) {
@@ -100,6 +104,8 @@ public:
 	}
 
 	Matrix operator/(Matrix &other) {
+		int nrow = getWidth();
+		int ncol = getHeight();
 		Matrix matrix(nrow, ncol);
 
 		for (int i = 0; i < nrow; i++) {
@@ -112,6 +118,8 @@ public:
 	}
 
 	Matrix operator*(Matrix &other)  {
+		int nrow = getWidth();
+		int ncol = getHeight();
 		int otherWidth = other.getWidth();
 		Matrix matrix(nrow, otherWidth);
 
@@ -128,7 +136,7 @@ public:
 		return matrix;
 	}
 
-	Matrix &operator=(Matrix &other)  {
+	Matrix &operator=(const Matrix &other)  {
 		matrix[-1]--;
 		if (matrix[-1] == 0) {
 			free(--matrix);
