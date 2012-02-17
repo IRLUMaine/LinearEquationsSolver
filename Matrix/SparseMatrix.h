@@ -5,28 +5,44 @@
 
 using namespace std;
 
-// Mostly currently a smart holder for SparseRow<SparseType>s
-// As time goes on will develop to have some code
-// to make sparse handling easier
+/**
+ * Mostly currently a smart holder for SparseRow<SparseType>s
+ * As time goes on will develop to have some code
+ * to make sparse handling easier
+ */
 class SparseMatrix : public Matrix {
 public:
-	// This is used to limit all of the rows to the same max size
+	/**
+	 * This is used to limit all of the rows to the same max size
+	 */
 	SparseMatrix(int nrows, int ncolmax);
 
-	// When this constructor is used all of the rows must be set
-	// using the setRow function.
+	/**
+	 * When this constructor is used all of the rows must be set
+	 * using the setRow function.
+	 */
 	SparseMatrix(int nrows);
 
 	SparseMatrix(const SparseMatrix& other);
 
 	~SparseMatrix();
 
+	/**
+	 * When more basic constructor is used, this function must be called for
+	 * each of the rows in the matrix.
+	 */
 	void setRow(int index, SparseRow<SparseType>* row) {
 		if (index < nrows) {
 			rows[index] = row;
 		}
 	}
 
+	/**
+	 * @Override
+	 *
+	 * Gets the specified row of the matrix and returns it in an object that
+	 * allows efficient access regardless of type.
+	 */
 	MatrixRow<SparseType> getRow(int index) {
 		if (index < nrows) {
 			return *rows[index];
@@ -35,6 +51,10 @@ public:
 		return sparseRow;
 	}
 
+	/**
+	 * Same as getRow however it returns this as a SparseRow instead of a
+	 * MatrixRow.
+	 */
 	virtual SparseRow<SparseType> getRowS(int index) {
 		if (index < nrows) {
 			return *rows[index];
@@ -43,14 +63,33 @@ public:
 		return sparseRow;
 	}
 
+	/**
+	 * @Override
+	 * This gets a value from the matrix at row ir, and column ic.
+	 */
 	MatrixType getVal(int ir, int ic) {
 		return getRow(ir).getValue(ic);
 	}
 
+	/**
+	 * Should not be called for a SparseMatrix. See getRowS and SparseRow.h.
+	 */
+	void setVal(int ir, int ic, MatrixType val) {
+		cout << "Warning: setVal called on SparseMatrix" << endl;
+	}
+
+	/**
+	 * @Override
+	 * Gets the height of the matrix.
+	 */
 	int getHeight() {
 		return nrows;
 	}
 
+	/**
+	 * @Override
+	 * Gets the width of the matrix.
+	 */
 	int getWidth() {
 		int max = 0;
 		for (int i = 0; i < nrows; i++) {
@@ -62,12 +101,14 @@ public:
 		return max;
 	}
 
-	void setVal(int ir, int ic, MatrixType val) {
-		cout << "Warning: setVal called on SparseMatrix" << endl;
-	}
-
+	/**
+	 * Smart allocation tracking
+	 */
 	SparseMatrix &operator=(SparseMatrix& other);
 
+	/**
+	 * Sparse efficient multiply (one sided - only skips zeros of this object).
+	 */
 	Matrix operator*(Matrix& other) {
         int nrow = getWidth();
         int ncol = getHeight();

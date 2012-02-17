@@ -6,14 +6,22 @@
 
 typedef float MatrixType;
 
-// Basic matrix class to be used in conjunction
-// with the SparseMatrix class, will be instantiated
-// upon any sort of operation (+,-,*), regardless
-// of subtypes being Sparse or not.
 
-// FEATURE This class could use some more work
+/**
+ * Basic matrix class to be used in conjunction
+ * with the SparseMatrix class, will be instantiated
+ * upon any sort of operation (+,-,*), regardless
+ * of subtypes being Sparse or not.
+ *
+ * // FEATURE This class could use some more work like overloading []
+ */
 class Matrix {
 public:
+	/**
+	 * Create a matrix of size nrow x ncol. Will allocate a chunk of continuous
+	 * memory to be used for this matrix. Will smart track copy construction and
+	 * = so that only freed when complete.
+	 */
 	Matrix(int nrow, int ncol) {
 		this->nrow = nrow;
 		this->ncol = ncol;
@@ -28,6 +36,9 @@ public:
 		}
 	}
 
+	/**
+	 * Smart pointer tracking.
+	 */
 	Matrix(const Matrix& other) {
 		this->nrow = other.nrow;
 		this->ncol = other.ncol;
@@ -35,6 +46,9 @@ public:
 		matrix[-1]++;
 	}
 
+	/**
+	 * For subclasses only. Should not be used.
+	 */
 	Matrix() {
 		// For Subclasses no allocation needed
 		matrix = NULL;
@@ -42,7 +56,10 @@ public:
 		ncol = 0;
 	}
 
-	~Matrix() {
+	/**
+	 * Keeps track of memory and frees if necessary.
+	 */
+	virtual ~Matrix() {
 		if (matrix != NULL) {
 			matrix--;
 			matrix[0]--;
@@ -52,6 +69,9 @@ public:
 		}
 	}
 
+	/**
+	 * This gets a value from the matrix at row ir, and column ic.
+	 */
 	virtual MatrixType getVal(int ir, int ic) {
 		if ((ir >= nrow) || (ic >= ncol)) {
 			fprintf(stderr, "Error: Attempted to read outside Matrix bounds %d %d %d %d\n", ir, ic, nrow, ncol);
@@ -59,7 +79,9 @@ public:
 		}
 		return matrix[ncol * ir + ic];
 	}
-
+	/**
+	 * This sets a value of the matrix at row ir, and column ic.
+	 */
 	virtual void setVal(int ir, int ic, MatrixType val) {
 		if ((ir >= nrow) || (ic >= ncol)) {
 			fprintf(stderr, "Error: Attempted to write outside Matrix bounds %d %d %d %d\n", ir, ic, nrow, ncol);
@@ -68,14 +90,39 @@ public:
 		matrix[ncol * ir + ic] = val;
 	}
 
+	/**
+	 * Gets the specified row of the matrix and returns it in an object that
+	 * allows efficient access regardless of type.
+	 */
+	virtual MatrixRow<MatrixType> getRow(int i) {
+		if (i < nrow) {
+			MatrixRow<MatrixType> matrixRow(&matrix[i*ncol], ncol);
+			return matrixRow;
+		} else {
+			MatrixRow<MatrixType> matrixRow;
+			return matrixRow;
+		}
+	}
+
+	/**
+	 * Gets the width of the matrix.
+	 */
 	virtual int getWidth() {
 		return ncol;
 	}
 
+	/**
+	 * Gets the height of the matrix.
+	 */
 	virtual int getHeight() {
 		return nrow;
 	}
 
+	/**
+	 * Overloaded for matrix element addition. Will create a new matrix of given
+	 * size. Does not check for size matching, assumes this matrix is larger or
+	 * equal.
+	 */
 	Matrix operator+(Matrix &other) {
 		int ncol = getWidth();
 		int nrow = getHeight();
@@ -90,6 +137,11 @@ public:
 		return matrix;
 	}
 
+	/**
+	 * Overloaded for matrix element subtraction. Will create a new matrix of
+	 * given size. Does not check for size matching, assumes this matrix is
+	 * larger or equal.
+	 */
 	Matrix operator-(Matrix &other) {
 		int ncol = getWidth();
 		int nrow = getHeight();
@@ -104,6 +156,11 @@ public:
 		return matrix;
 	}
 
+	/**
+	 * Overloaded for matrix element division. Will create a new matrix of
+	 * given size. Does not check for size matching, assumes this matrix is
+	 * larger or equal.
+	 */
 	Matrix operator/(Matrix &other) {
 		int ncol = getWidth();
 		int nrow = getHeight();
@@ -118,6 +175,10 @@ public:
 		return matrix;
 	}
 
+	/**
+	 * Performs a matrix multiplication (not element by element). Will use
+	 * getVal function to retrieve values to allow for subclass implementations.
+	 */
 	Matrix operator*(Matrix &other)  {
 		int ncol = getWidth();
 		int nrow = getHeight();
@@ -138,6 +199,9 @@ public:
 		return matrix;
 	}
 
+	/**
+	 * For smart allocation and freeing.
+	 */
 	Matrix &operator=(const Matrix &other)  {
 		matrix[-1]--;
 		if (matrix[-1] == 0) {
@@ -150,16 +214,6 @@ public:
 		matrix[-1]++;
 
 		return *this;
-	}
-
-	virtual MatrixRow<MatrixType> getRow(int i) {
-		if (i < nrow) {
-			MatrixRow<MatrixType> matrixRow(&matrix[i*ncol], ncol);
-			return matrixRow;
-		} else {
-			MatrixRow<MatrixType> matrixRow;
-			return matrixRow;
-		}
 	}
 
 private:

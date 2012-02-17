@@ -5,13 +5,18 @@
 
 typedef MatrixType SparseType;
 
-// Class to handle sparse matrix storage
-// This is setup with mostly virtual functions for the purposes
-// of a dynamic sparse row class that will utilize a vector
-// in the future to make it easier to handle
+/**
+ * Class to handle sparse matrix storage
+ * This is setup with mostly virtual functions for the purposes
+ * of a dynamic sparse row class that will utilize a vector
+ * in the future to make it easier to handle
+ */
 template <typename T>
 class SparseRow : public MatrixRow<T> {
 public:
+	/**
+	 * Creates an empty sparse row. It can only hold a maximum of size elements.
+	 */
 	SparseRow(int size) {
 	    this->size = size;
 	    this->values = (T*)malloc(size * sizeof(T));
@@ -29,6 +34,9 @@ public:
 	~SparseRow() {
 	}
 
+	/**
+	 * This inserts a value at the column ind, in the first available space.
+	 */
 	virtual bool addVal(int ind, T value) {
     	int i = -1;
     	while ((++i < size) && (index[i] != -1));
@@ -41,18 +49,46 @@ public:
     	}
 	}
 
+	/**
+	 * The following is a set of functions to facilitate sparse access. The life
+	 * -cycle of said access would be something like as follows.
+	 *
+	 * row.reset();
+	 * do {
+	 * 		int index = row.getIndex();
+	 * 		T val = row.getValue();
+	 * 		// Do stuff
+	 * } while (row.next());
+	 *
+	 * Reset will start the getIndex(), getValue(), and next() functions to the
+	 * beginning of the row.
+	 */
 	virtual void reset() {
 		loc = 0;
 	}
 
+	/**
+	 * Moves the row ahead by elements. Only calling this or reset() can change
+	 * the values returned by getIndex() and getValue().
+	 *
+	 * next() will return true if there is a new value to be received by
+	 * getValue(). Otherwise the end of row has been reached and it will return
+	 * false.
+	 */
 	virtual bool next() {
 		return ((++loc < size) && (index[loc] != -1));
 	}
 
+	/**
+	 * Returns what column the current element is located in.
+	 */
 	virtual int getIndex() {
 		return index[loc];
 	}
 
+	/**
+	 * Returns the value of the current element.
+	 */
 	virtual T getValue() {
 		return values[loc];
 	}
