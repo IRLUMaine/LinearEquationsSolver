@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cmath>
+#include "MatrixRow.h"
 
 typedef float MatrixType;
 
@@ -125,10 +126,6 @@ public:
 		Matrix matrix(nrow, otherWidth);
 
 		for (int i = 0; i < nrow; i++) {
-			if (((double)i) / nrow > percent) {
-				printf("%lf\n", 100*percent);
-				percent += .001;
-			}
 			for (int j = 0; j < otherWidth; j++) {
 				MatrixType sum = 0;
 				for (int k = 0; k < ncol; k++) {
@@ -155,8 +152,19 @@ public:
 		return *this;
 	}
 
+	virtual MatrixRow<MatrixType> getRow(int i) {
+		if (i < nrow) {
+			MatrixRow<MatrixType> matrixRow(&matrix[i*ncol], ncol);
+			return matrixRow;
+		} else {
+			MatrixRow<MatrixType> matrixRow;
+			return matrixRow;
+		}
+	}
+
 private:
 	MatrixType* matrix;
 	int nrow;
 	int ncol;
 };
+

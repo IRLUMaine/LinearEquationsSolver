@@ -3,13 +3,13 @@
 
 SparseMatrix::SparseMatrix(int nrows, int ncolmax) {
 	this->nrows = nrows;
-	this->rows = (SparseRow**)malloc(nrows * sizeof(SparseRow*));
+	this->rows = (SparseRow<SparseType>**)malloc(nrows * sizeof(SparseRow<SparseType>*));
 	if (rows == NULL) {
 		this->nrows = 0;
 	}
 
 	for (int i = 0; i < nrows; i++) {
-		this->rows[i] = new SparseRow(ncolmax);
+		this->rows[i] = new SparseRow<SparseType>(ncolmax);
 	}
 	this->count = (int*)malloc(sizeof(int));
 
@@ -21,7 +21,7 @@ SparseMatrix::SparseMatrix(int nrows, int ncolmax) {
 
 SparseMatrix::SparseMatrix(int nrows) {
 	this->nrows = nrows;
-	this->rows = (SparseRow**)malloc(nrows * sizeof(SparseRow*));
+	this->rows = (SparseRow<SparseType>**)malloc(nrows * sizeof(SparseRow<SparseType>*));
 	if (rows == NULL) {
 		this->nrows = 0;
 	}

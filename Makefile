@@ -1,7 +1,6 @@
 TARGET=jacobi_solve
 SRCS=JacobiSolve.cpp \
 	Matrix/SparseMatrix.cpp \
-	Matrix/SparseRow.cpp\
 	Communication/Thread.cpp
 OBJDIR=objs
 OBJS=$(patsubst %.cpp,$(OBJDIR)/%.o,$(SRCS))

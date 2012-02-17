@@ -1,6 +1,7 @@
 #pragma once
 #include <stdlib.h>
 #include "Matrix.h"
+#include "MatrixRow.h"
 
 typedef MatrixType SparseType;
 
@@ -8,14 +9,37 @@ typedef MatrixType SparseType;
 // This is setup with mostly virtual functions for the purposes
 // of a dynamic sparse row class that will utilize a vector
 // in the future to make it easier to handle
-class SparseRow {
+template <typename T>
+class SparseRow : public MatrixRow<T> {
 public:
-	SparseRow(int size);
+	SparseRow(int size) {
+	    this->size = size;
+	    this->values = (T*)malloc(size * sizeof(T));
+	    this->index = (int*)malloc(size * sizeof(T));
+	    if ((values == NULL) && (index == NULL)) {
+	        this->size = 0;
+	    }
+	    for (int i = 0; i < this->size; i++) {
+	        this->index[i] = -1;
+	    }
+	    this->loc = 0;
+	}
+
 
 	~SparseRow() {
 	}
 
-	virtual bool addVal(int i, SparseType value);
+	virtual bool addVal(int ind, T value) {
+    	int i = -1;
+    	while ((++i < size) && (index[i] != -1));
+    	if (i < size) {
+    	    values[i] = value;
+    	    index[i] = ind;
+    	    return false;
+    	} else {
+    	    return true;
+    	}
+	}
 
 	virtual void reset() {
 		loc = 0;
@@ -29,7 +53,7 @@ public:
 		return index[loc];
 	}
 
-	virtual SparseType getValue() {
+	virtual T getValue() {
 		return values[loc];
 	}
 
@@ -42,15 +66,15 @@ public:
 		return -1;
 	}
 
-	virtual SparseType getValue(int i) {
+	T getValue(int i) {
 		int ind = getIndex(i);
 		if (ind >= 0) {
 			return values[ind];
 		}
-		return (SparseType)0;
+		return (T)0;
 	}
 
-	int getMax() {
+	virtual int getMax() {
 		int max = 0;
 		for (int i = 0; i < size; i++) {
 			if (index[i] > max) {
@@ -61,7 +85,7 @@ public:
 	}
 
 private:
-	SparseType* values;
+	T* values;
 	int* index;
 	int size;
 	int loc;

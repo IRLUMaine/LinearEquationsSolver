@@ -55,7 +55,7 @@ public:
 			getline(file, line);
 			sscanf(line.c_str(), "%d", &rsize);
 			if (maxRow == -1) {
-				A->setRow(r, new SparseRow(rsize));
+				A->setRow(r, new SparseRow<SparseType>(rsize));
 			}
 
 			// Loop through each non-zero in the row
@@ -65,7 +65,7 @@ public:
 				getline(file, line);
 				sscanf(line.c_str(), "%d %d %g", &rIndex, &cIndex, &val);
 
-				A->getRow(rIndex-1).addVal(cIndex-1, val);
+				A->getRowS(rIndex-1).addVal(cIndex-1, val);
 			}
 		}
 		cout << "Done getting A" << endl;
