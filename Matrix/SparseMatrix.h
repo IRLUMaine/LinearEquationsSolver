@@ -59,6 +59,35 @@ public:
 
 	SparseMatrix &operator=(SparseMatrix& other);
 
+	Matrix operator*(Matrix& other) {
+        int nrow = getWidth();
+        int ncol = getHeight();
+        int otherWidth = other.getWidth();
+        double percent = 0;
+        Matrix matrix(nrow, otherWidth);
+
+        for (int i = 0; i < nrow; i++) {
+            if (((double)i) / nrow > percent) {
+                printf("%lf\n", 100*percent);
+                percent += .001;
+            }
+            for (int j = 0; j < otherWidth; j++) {
+                MatrixType sum = 0;
+				SparseRow row = getRow(i);
+				row.reset();
+				do {
+					int index = row.getIndex();
+					SparseType val = row.getValue();
+					sum += val * other.getVal(index, j);
+				} while (row.next());
+                matrix.setVal(i, j, sum);
+            }
+        }
+
+        return matrix;
+
+	}
+
 private:
 	SparseRow** rows;
 	int *count;

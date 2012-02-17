@@ -53,7 +53,7 @@ public:
 
 	virtual MatrixType getVal(int ir, int ic) {
 		if ((ir >= nrow) || (ic >= ncol)) {
-			fprintf(stderr, "Error: Attempted to access outside Matrix bounds %d %d\n", ir, ic);
+			fprintf(stderr, "Error: Attempted to read outside Matrix bounds %d %d %d %d\n", ir, ic, nrow, ncol);
 			return 0;
 		}
 		return matrix[ncol * ir + ic];
@@ -61,7 +61,7 @@ public:
 
 	virtual void setVal(int ir, int ic, MatrixType val) {
 		if ((ir >= nrow) || (ic >= ncol)) {
-			fprintf(stderr, "Error: Attempted to access outside Matrix bounds %d %d\n", ir, ic);
+			fprintf(stderr, "Error: Attempted to write outside Matrix bounds %d %d %d %d\n", ir, ic, nrow, ncol);
 			return;
 		}
 		matrix[ncol * ir + ic] = val;
@@ -76,8 +76,8 @@ public:
 	}
 
 	Matrix operator+(Matrix &other) {
-		int nrow = getWidth();
-		int ncol = getHeight();
+		int ncol = getWidth();
+		int nrow = getHeight();
 		Matrix matrix(nrow, ncol);
 
 		for (int i = 0; i < nrow; i++) {
@@ -90,8 +90,8 @@ public:
 	}
 
 	Matrix operator-(Matrix &other) {
-		int nrow = getWidth();
-		int ncol = getHeight();
+		int ncol = getWidth();
+		int nrow = getHeight();
 		Matrix matrix(nrow, ncol);
 
 		for (int i = 0; i < nrow; i++) {
@@ -104,8 +104,8 @@ public:
 	}
 
 	Matrix operator/(Matrix &other) {
-		int nrow = getWidth();
-		int ncol = getHeight();
+		int ncol = getWidth();
+		int nrow = getHeight();
 		Matrix matrix(nrow, ncol);
 
 		for (int i = 0; i < nrow; i++) {
@@ -118,16 +118,21 @@ public:
 	}
 
 	Matrix operator*(Matrix &other)  {
-		int nrow = getWidth();
-		int ncol = getHeight();
+		int ncol = getWidth();
+		int nrow = getHeight();
 		int otherWidth = other.getWidth();
+		double percent = 0;
 		Matrix matrix(nrow, otherWidth);
 
 		for (int i = 0; i < nrow; i++) {
+			if (((double)i) / nrow > percent) {
+				printf("%lf\n", 100*percent);
+				percent += .001;
+			}
 			for (int j = 0; j < otherWidth; j++) {
 				MatrixType sum = 0;
 				for (int k = 0; k < ncol; k++) {
-					sum += getVal(i, k) * getVal(k, j);
+					sum += getVal(i, k) * other.getVal(k, j);
 				}
 				matrix.setVal(i, j, sum);
 			}
