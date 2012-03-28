@@ -3,24 +3,21 @@
 #include "Matrix.h"
 #include "MatrixRow.h"
 
-typedef MatrixType SparseType;
-
 /**
  * Class to handle sparse matrix storage
- * This is setup with mostly virtual functions for the purposes
+ * MatrixTypehis is setup with mostly virtual functions for the purposes
  * of a dynamic sparse row class that will utilize a vector
  * in the future to make it easier to handle
  */
-template <typename T>
-class SparseRow : public MatrixRow<T> {
+class SparseRow : public MatrixRow {
 public:
 	/**
 	 * Creates an empty sparse row. It can only hold a maximum of size elements.
 	 */
 	SparseRow(int size) {
 	    this->size = size;
-	    this->values = (T*)malloc(size * sizeof(T));
-	    this->index = (int*)malloc(size * sizeof(T));
+	    this->values = (MatrixType*)malloc(size * sizeof(MatrixType));
+	    this->index = (int*)malloc(size * sizeof(MatrixType));
 	    if ((values == NULL) && (index == NULL)) {
 	        this->size = 0;
 	    }
@@ -30,14 +27,36 @@ public:
 	    this->loc = 0;
 	}
 
+	SparseRow(const SparseRow& other) {
+	    this->size = other.size;
+	    this->values = (MatrixType*)malloc(size * sizeof(MatrixType));
+	    this->index = (int*)malloc(size * sizeof(MatrixType));
+	    for (int i = 0; i < this->size; i++) {
+	        this->index[i] = other.index[i];
+	        this->values[i] = other.values[i];
+	    }
+	    this->loc = 0;
+	}
 
-	~SparseRow() {
+	virtual ~SparseRow() {
+		if (size > 0) {
+			free(this->values);
+			free(this->index);
+		}
+	}
+
+	MatrixType getValue(int i) {
+		int ind = getIndex(i);
+		if (ind >= 0) {
+			return values[ind];
+		}
+		return (MatrixType)0;
 	}
 
 	/**
-	 * This inserts a value at the column ind, in the first available space.
+	 * MatrixTypehis inserts a value at the column ind, in the first available space.
 	 */
-	virtual bool addVal(int ind, T value) {
+	virtual bool addVal(int ind, MatrixType value) {
     	int i = -1;
     	while ((++i < size) && (index[i] != -1));
     	if (i < size) {
@@ -50,13 +69,13 @@ public:
 	}
 
 	/**
-	 * The following is a set of functions to facilitate sparse access. The life
+	 * MatrixTypehe following is a set of functions to facilitate sparse access. MatrixTypehe life
 	 * -cycle of said access would be something like as follows.
 	 *
 	 * row.reset();
 	 * do {
 	 * 		int index = row.getIndex();
-	 * 		T val = row.getValue();
+	 * 		MatrixType val = row.getValue();
 	 * 		// Do stuff
 	 * } while (row.next());
 	 *
@@ -89,7 +108,7 @@ public:
 	/**
 	 * Returns the value of the current element.
 	 */
-	virtual T getValue() {
+	virtual MatrixType getValue() {
 		return values[loc];
 	}
 
@@ -102,14 +121,6 @@ public:
 		return -1;
 	}
 
-	T getValue(int i) {
-		int ind = getIndex(i);
-		if (ind >= 0) {
-			return values[ind];
-		}
-		return (T)0;
-	}
-
 	virtual int getMax() {
 		int max = 0;
 		for (int i = 0; i < size; i++) {
@@ -120,8 +131,20 @@ public:
 		return max + 1;
 	}
 
+	SparseRow& operator=(SparseRow& other) {
+	    this->size = other.size;
+	    this->values = (MatrixType*)malloc(size * sizeof(MatrixType));
+	    this->index = (int*)malloc(size * sizeof(MatrixType));
+	    for (int i = 0; i < this->size; i++) {
+	        this->index[i] = other.index[i];
+	        this->values[i] = other.values[i];
+	    }
+	    this->loc = 0;
+	    return other;
+	}
+
 private:
-	T* values;
+	MatrixType* values;
 	int* index;
 	int size;
 	int loc;

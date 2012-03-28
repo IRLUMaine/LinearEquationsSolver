@@ -1,15 +1,18 @@
 #pragma once
+#include <pthread.h>
 
 enum MessageType {
 	NoMessage=0,
-	StringMessage
+	StringMessage,
+	MatrixVals,
+	ProcStatus
 };
 
 // Responsibility of sender to allocate p
 // responsibility of receiver to free p
 class Message {
 public:
-	Message(MessageType type, const void *p, int bytes) {
+	Message(MessageType type, void *p, int bytes) {
 		this->type = type;
 		this->p = p;
 		this->bytes = bytes;
@@ -23,11 +26,17 @@ public:
 
 	Message(const Message& message) {
 		this->type = message.type;
-		this->p = message.p;
 		this->bytes = message.bytes;
+		this->p = new char[bytes];
+		for (int i = 0; i < bytes; i++) {
+			((char*)this->p)[i] = ((char*)message.p)[i];
+		}
 	}
 
 	~Message() {
+		if (this->p) {
+			delete[] (int*)this->p;
+		}
 	}
 
 	MessageType getType() {
@@ -42,15 +51,34 @@ public:
 		return bytes;
 	}
 
+	void setType(MessageType type) {
+		this->type = type;
+	}
+
+	void setData(void *p, int bytes) {
+		if (this->p) {
+			delete[] (int*)this->p;
+		}
+		this->p = p;
+		this->bytes = bytes;
+	}
+
 	Message &operator=(Message& message) {
+		if (this->p) {
+			delete[] (int*)this->p;
+		}
 		this->type = message.type;
-		this->p = message.p;
 		this->bytes = message.bytes;
-		
-		return *this;
+		this->p = new char[bytes];
+		for (int i = 0; i < bytes; i++) {
+			((char*)this->p)[i] = ((char*)message.p)[i];
+		}
+
+		return message;
 	}
 private:
 	MessageType type;
-	const void *p;
+	void *p;
 	int bytes;
+	bool local;
 };

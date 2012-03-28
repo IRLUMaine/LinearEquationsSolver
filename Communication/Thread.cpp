@@ -8,6 +8,7 @@ Thread::~Thread() {
 	if (isRunning) {
 		pthread_join(threadId, NULL);
 	}
+	pthread_detach(threadId);
 }
 
 void Thread::start() {
@@ -59,4 +60,5 @@ bool Thread::isAwake() {
 
 void *Thread::threadStart(void *p) {
 	((Thread*)p)->threadStartup();
+	return NULL;
 }

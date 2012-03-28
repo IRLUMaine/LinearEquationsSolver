@@ -88,6 +88,7 @@ public:
 	void readFile() {
 		int rows;
 		string line;
+		int count = 0;
 
 		getline(file, line);
 		sscanf(line.c_str(), "%d", &rows);
@@ -110,17 +111,17 @@ public:
 			getline(file, line);
 			sscanf(line.c_str(), "%d", &rsize);
 			if (maxRow == -1) {
-				A->setRow(r, new SparseRow<SparseType>(rsize));
+				A->setRow(r, new SparseRow(rsize));
 			}
 
 			// Loop through each non-zero in the row
 			for (int ct = 0; ct < rsize; ct++) {
 				int cIndex, rIndex;
-				MatrixType val;
+				float val;
 				getline(file, line);
 				sscanf(line.c_str(), "%d %d %g", &rIndex, &cIndex, &val);
 
-				A->getRowS(rIndex-1).addVal(cIndex-1, val);
+				A->getRowS(rIndex-1)->addVal(cIndex-1, (MatrixType)val);
 			}
 		}
 		cout << "Done getting A" << endl;

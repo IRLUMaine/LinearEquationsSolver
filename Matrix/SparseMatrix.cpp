@@ -3,13 +3,14 @@
 
 SparseMatrix::SparseMatrix(int nrows, int ncolmax) {
 	this->nrows = nrows;
-	this->rows = (SparseRow<SparseType>**)malloc(nrows * sizeof(SparseRow<SparseType>*));
+	this->rows = (SparseRow**)malloc(nrows * sizeof(SparseRow*));
 	if (rows == NULL) {
 		this->nrows = 0;
 	}
 
 	for (int i = 0; i < nrows; i++) {
-		this->rows[i] = new SparseRow<SparseType>(ncolmax);
+		printf("ALLOCATION!\n");
+		this->rows[i] = new SparseRow(ncolmax);
 	}
 	this->count = (int*)malloc(sizeof(int));
 
@@ -21,7 +22,7 @@ SparseMatrix::SparseMatrix(int nrows, int ncolmax) {
 
 SparseMatrix::SparseMatrix(int nrows) {
 	this->nrows = nrows;
-	this->rows = (SparseRow<SparseType>**)malloc(nrows * sizeof(SparseRow<SparseType>*));
+	this->rows = (SparseRow**)malloc(nrows * sizeof(SparseRow*));
 	if (rows == NULL) {
 		this->nrows = 0;
 	}
@@ -38,16 +39,6 @@ SparseMatrix::SparseMatrix(int nrows) {
 }
 
 SparseMatrix::SparseMatrix(const SparseMatrix& other) {
-	this->count[0]--;
-	if (this->count[0] == 0) {
-		for (int i = 0; i < nrows; i++) {
-			if (rows[i] != NULL) {
-				delete rows[i];
-			}
-		}
-		free(rows);
-	}
-
 	this->count = other.count;
 	this->count++;
 	this->nrows = other.nrows;
@@ -63,12 +54,15 @@ SparseMatrix &SparseMatrix::operator=(SparseMatrix& other) {
             }
         }
         free(rows);
+        free(count);
     }
 
     this->count = other.count;
     this->count++;
     this->nrows = other.nrows;
     this->rows = other.rows;
+
+    return *this;
 }
 
 SparseMatrix::~SparseMatrix() {
@@ -80,6 +74,7 @@ SparseMatrix::~SparseMatrix() {
 			}
 		}
 		free(rows);
+        free(count);
 	}
 }
 

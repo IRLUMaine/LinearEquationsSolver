@@ -1,15 +1,18 @@
 TARGET=jacobi_solve
 SRCS=JacobiSolve.cpp \
 	Matrix/SparseMatrix.cpp \
-	Communication/Thread.cpp
+	Communication/Thread.cpp \
+	Processing/JacobiCPU.cpp \
+	Processing/Distributor.cpp
 OBJDIR=objs
 OBJS=$(patsubst %.cpp,$(OBJDIR)/%.o,$(SRCS))
 BUILDDIR= objs/Matrix\
-		  objs/Communication
-CFLAGS=-O2 -g#-Wall
-NFLAGS=$(CFLAGS) -arch sm_20
+		  objs/Communication\
+		  objs/Processing
+CFLAGS=-O2 -g #-Wall
+NFLAGS=$(CFLAGS)# -arch sm_20
 LIBS=-lpthread
-NVCC=nvcc
+NVCC=g++
 
 .PHONY:all clean
 all:$(TARGET)

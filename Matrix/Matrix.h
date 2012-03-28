@@ -2,10 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cmath>
+
+typedef double MatrixType;
 #include "MatrixRow.h"
-
-typedef float MatrixType;
-
 
 /**
  * Basic matrix class to be used in conjunction
@@ -25,11 +24,11 @@ public:
 	Matrix(int nrow, int ncol) {
 		this->nrow = nrow;
 		this->ncol = ncol;
-		matrix = (MatrixType*) malloc(ncol * nrow * sizeof(MatrixType) + 1);
+		matrix = (MatrixType*) malloc((ncol * nrow + 1) * sizeof(MatrixType));
 		if (matrix == NULL) {
 			this->nrow = 0;
 			this->ncol = 0;
-			fprintf(stderr, "Error: Matrix could not allocate %d bytes\n", ncol*nrow*sizeof(MatrixType));
+			fprintf(stderr, "Error: Matrix could not allocate %d bytes\n", (int)(ncol*nrow*sizeof(MatrixType)));
 		} else {
 			matrix[0] = 1;
 			matrix++;
@@ -94,13 +93,12 @@ public:
 	 * Gets the specified row of the matrix and returns it in an object that
 	 * allows efficient access regardless of type.
 	 */
-	virtual MatrixRow<MatrixType> getRow(int i) {
+	virtual MatrixRow *getRow(int i) {
+		printf("ALLOCATION!\n");
 		if (i < nrow) {
-			MatrixRow<MatrixType> matrixRow(&matrix[i*ncol], ncol);
-			return matrixRow;
+			return new MatrixRow(&matrix[i*ncol], ncol);
 		} else {
-			MatrixRow<MatrixType> matrixRow;
-			return matrixRow;
+			return new MatrixRow();
 		}
 	}
 
@@ -214,6 +212,10 @@ public:
 		matrix[-1]++;
 
 		return *this;
+	}
+
+	MatrixRow &operator[](int index) {
+		return *getRow(index);
 	}
 
 private:

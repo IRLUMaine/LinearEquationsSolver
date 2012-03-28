@@ -6,7 +6,7 @@
 using namespace std;
 
 /**
- * Mostly currently a smart holder for SparseRow<SparseType>s
+ * Mostly currently a smart holder for SparseRow<MatrixType>s
  * As time goes on will develop to have some code
  * to make sparse handling easier
  */
@@ -31,7 +31,7 @@ public:
 	 * When more basic constructor is used, this function must be called for
 	 * each of the rows in the matrix.
 	 */
-	void setRow(int index, SparseRow<SparseType>* row) {
+	void setRow(int index, SparseRow* row) {
 		if (index < nrows) {
 			rows[index] = row;
 		}
@@ -43,24 +43,23 @@ public:
 	 * Gets the specified row of the matrix and returns it in an object that
 	 * allows efficient access regardless of type.
 	 */
-	MatrixRow<SparseType> getRow(int index) {
+	MatrixRow *getRow(int index) {
 		if (index < nrows) {
-			return *rows[index];
+			return rows[index];
 		}
-		SparseRow<SparseType> sparseRow(10);
-		return sparseRow;
+		return NULL;
 	}
 
 	/**
 	 * Same as getRow however it returns this as a SparseRow instead of a
 	 * MatrixRow.
 	 */
-	virtual SparseRow<SparseType> getRowS(int index) {
+	virtual SparseRow *getRowS(int index) {
 		if (index < nrows) {
-			return *rows[index];
+			return rows[index];
 		}
-		SparseRow<SparseType> sparseRow(10);
-		return sparseRow;
+
+		return NULL;
 	}
 
 	/**
@@ -68,7 +67,7 @@ public:
 	 * This gets a value from the matrix at row ir, and column ic.
 	 */
 	MatrixType getVal(int ir, int ic) {
-		return getRow(ir).getValue(ic);
+		return getRow(ir)->getValue(ic);
 	}
 
 	/**
@@ -93,7 +92,7 @@ public:
 	int getWidth() {
 		int max = 0;
 		for (int i = 0; i < nrows; i++) {
-			int nmax = getRowS(i).getMax();
+			int nmax = getRowS(i)->getMax();
 			if (nmax > max) {
 				max = nmax;
 			}
@@ -123,13 +122,13 @@ public:
             }
             for (int j = 0; j < otherWidth; j++) {
                 MatrixType sum = 0;
-				SparseRow<SparseType> row = getRowS(i);
-				row.reset();
+				SparseRow *row = getRowS(i);
+				row->reset();
 				do {
-					int index = row.getIndex();
-					SparseType val = row.getValue();
+					int index = row->getIndex();
+					MatrixType val = row->getValue();
 					sum += val * other.getVal(index, j);
-				} while (row.next());
+				} while (row->next());
                 matrix.setVal(i, j, sum);
             }
         }
@@ -139,7 +138,7 @@ public:
 	}
 
 private:
-	SparseRow<SparseType>** rows;
+	SparseRow** rows;
 	int *count;
 	int nrows;
 };
