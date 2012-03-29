@@ -7,28 +7,38 @@
 #include "Processing/Distributor.h"
 
 using namespace std;
-#define PROCS 3
+#define PROCS 4
 #define COMPLETE_THRESHOLD 5
+
+#define ROW 301
+#define COL 561
 
 int main(int argc, char * argv[])
 {
+	// Produce some classes
 	FastookReader reader("matrix.file");
 	JacobiCPU jacobiSolver[PROCS];
 	Distributor distributor[PROCS];
 	Mailbox collection;
-	Mailbox *list[PROCS][PROCS];;
+	Mailbox *list[PROCS][PROCS];
 	int completeFlags[PROCS] = {0};
 	bool done = false;
+
+	// Setup which distributor controls which thread
+	// When PROC=1 these do essentially nothing
 	for (int i = 0; i < PROCS; i++) {
 		distributor[i].setControl(list[i], &jacobiSolver[i], &collection);
 	}
 
+	// Matrix setup stuff
 	reader.readFile();
 	MatrixRow** rows[PROCS];
 	int* rowInd[PROCS];
 	int height = reader.getA()->getHeight();
 	int size = height/PROCS;
 
+	// Allocate memory for row pointer storage
+	// Setup distribution lists
 	for (int i = 0; i < PROCS; i++) {
 		rows[i] = new MatrixRow*[size];
 		if (!rows[i]) {
@@ -49,6 +59,8 @@ int main(int argc, char * argv[])
 		list[i][PROCS-1] = NULL;
 	}
 
+	// Fill in row pointer memory
+	// This distributes what PROCS solve which vars
 	for (int j = 0; j < PROCS; j++) {
 		for (int i = 0; i < size; i++) {
 			if (j*size+i < height) {
@@ -61,6 +73,9 @@ int main(int argc, char * argv[])
 		}
 	}
 
+	// Finally give setup control data to jacobi PROCS
+	// Also setup max number of iterations between comm
+	// packets.
 	for (int i = 0; i < PROCS; i++) {
 		int j;
 		for (j = 0; j < size; j++) {
@@ -69,19 +84,24 @@ int main(int argc, char * argv[])
 			}
 		}
 		jacobiSolver[i].setControl(distributor + i, rows[i], reader.getB(), rowInd[i], j, height, i);
-		jacobiSolver[i].setMaxIter(5);
+		jacobiSolver[i].setMaxIter(1);
 	}
 
+	// Start all threads
 	for (int i = 0; i < PROCS; i++) {
 		distributor[i].start();
 		jacobiSolver[i].start();
 	}
+	// Wait till everyone done.
 	while (!done) {
+		// Check for status messages
 		while (collection.hasMessage()) {
 			Message message = collection.getMessage();
 			if (message.getType() == ProcStatus) {
 				int* buf = (int *)message.getData();
 				if (buf[1]) {
+					// Wait a little bit after completion to make sure all are really done
+					// counting to some number solves this
 					completeFlags[buf[0]]++;
 				} else {
 					completeFlags[buf[0]] = 0;
@@ -97,12 +117,16 @@ int main(int argc, char * argv[])
 				printf("Message %d\n", message.getType());
 			}
 		}
+		// Give up some CPU time.
 		usleep(100);
 	}
+	// Stop the threads
+	// Distributors will stop when owner completes
 	for (int i = 0; i < PROCS; i++) {
 		jacobiSolver[i].setRunning(false);
 		jacobiSolver[i].stop();
 	}
+	// Print some results.
 //	for (int j = 0; j < PROCS; j++) {
 //		for (int i = 0; i < size; i++) {
 //			printf("%lf\n", jacobiSolver[j].getX()[i + j * (size)]);
@@ -116,7 +140,7 @@ int main(int argc, char * argv[])
 //			distributor[i].stop();
 //		}
 //	}
-
+	// Free some memory
 	for (int i = 0; i < PROCS; i++) {
 		delete[] rows[i];
 		delete[] rowInd[i];

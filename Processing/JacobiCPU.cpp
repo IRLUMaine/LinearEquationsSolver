@@ -43,6 +43,9 @@ JacobiCPU::~JacobiCPU() {
 	}
 }
 
+/**
+ * This is allows for array allocation
+ */
 void JacobiCPU::setControl(Thread* distributor, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
 	this->rows = rows;
 	this->size = size;

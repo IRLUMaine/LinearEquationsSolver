@@ -112,6 +112,9 @@ public:
 		return values[loc];
 	}
 
+	/**
+	 * Gets index of the ith element stored in the sparse row.
+	 */
 	virtual int getIndex(int i) {
 		for (int j = 0;j < size; j++) {
 			if (index[j] == i) {
@@ -121,6 +124,9 @@ public:
 		return -1;
 	}
 
+	/**
+	 * Gets the highest column index in this row.
+	 */
 	virtual int getMax() {
 		int max = 0;
 		for (int i = 0; i < size; i++) {
@@ -131,6 +137,9 @@ public:
 		return max + 1;
 	}
 
+	/**
+	 * This does a deep copy of sparse row.
+	 */
 	SparseRow& operator=(SparseRow& other) {
 	    this->size = other.size;
 	    this->values = (MatrixType*)malloc(size * sizeof(MatrixType));

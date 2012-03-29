@@ -21,6 +21,11 @@ public:
 	 */
 	void setControl(Mailbox** receivers, JacobiCPU* owner, Mailbox* collector);
 
+	/**
+	 * This waits for packets coming from the processor and distributes it to
+	 * a list of receivers. If it is a ProcStatus packet it is sent to the
+	 * collecting mailbox so the collector can know when all have converged.
+	 */
 	void run();
 
 private:

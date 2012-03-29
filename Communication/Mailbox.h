@@ -22,6 +22,10 @@ public:
 		pthread_mutex_destroy(&mutex);
 	}
 
+	/**
+	 * Get message if exists and remove it from
+	 * the queue.
+	 */
 	Message getMessage() {
 		if (hasMessage()) {
 			front++;
@@ -39,10 +43,16 @@ public:
 		}
 	}
 
+	/**
+	 * Check to see if mailbox has message.
+	 */
 	bool hasMessage() {
 		return (((front + 1) % MAILBOX_SIZE) != back);
 	}
 
+	/**
+	 * Check to see if mailbox is full.
+	 */
 	bool isFull() {
 		if (notLocking || (pthread_mutex_lock(&mutex) == 0)) {
 			bool full = (back == front);
@@ -55,6 +65,10 @@ public:
 		}
 	}
 
+	/**
+	 * Add message to queue if space exists.
+	 * returns true if successful.
+	 */
 	bool addMessage(Message& message) {
 		if (notLocking || (pthread_mutex_lock(&mutex) == 0)) {
 			if (back != front) {
@@ -76,6 +90,10 @@ public:
 		}
 	}
 
+	/**
+	 * Turn on or off the mutex locking of mailbox incoming
+	 * messages. Useful in single path message passing.
+	 */
 	void setLocking(bool lock) {
 		notLocking = !lock;
 	}

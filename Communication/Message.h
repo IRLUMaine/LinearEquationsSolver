@@ -8,8 +8,10 @@ enum MessageType {
 	ProcStatus
 };
 
-// Responsibility of sender to allocate p
-// responsibility of receiver to free p
+/**
+ * Data that is given to a message will be freed/deleted by the message
+ * be careful of this.
+ */
 class Message {
 public:
 	Message(MessageType type, void *p, int bytes) {
@@ -39,22 +41,38 @@ public:
 		}
 	}
 
+	/**
+	 * Get the type of the message
+	 */
 	MessageType getType() {
 		return type;
 	}
 
+	/**
+	 * Get the data
+	 */
 	const void *getData() {
 		return p;
 	}
 
+	/**
+	 * Get number of bytes contained in message
+	 */
 	int getSize() {
 		return bytes;
 	}
 
+	/**
+	 * Set the type of message
+	 */
 	void setType(MessageType type) {
 		this->type = type;
 	}
 
+	/**
+	 * Set the data in the message.
+	 * Will be freed by Message.
+	 */
 	void setData(void *p, int bytes) {
 		if (this->p) {
 			delete[] (int*)this->p;
@@ -63,6 +81,9 @@ public:
 		this->bytes = bytes;
 	}
 
+	/**
+	 * Performs deep copy of data.
+	 */
 	Message &operator=(Message& message) {
 		if (this->p) {
 			delete[] (int*)this->p;
