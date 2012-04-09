@@ -37,9 +37,9 @@ void Distributor::run() {
 			switch (message.getType()) {
 			case MatrixVals:
 				for (int i = 0; receivers[i] != NULL; i++) {
-					if (!receivers[i]->isFull()) {
-						receivers[i]->addMessage(message);
-					}
+					while (receivers[i]->isFull());
+					receivers[i]->addMessage(message);
+					//}
 				}
 				break;
 			case ProcStatus:

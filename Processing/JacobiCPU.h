@@ -2,9 +2,12 @@
 #include "../Communication/Thread.h"
 #include "../Matrix/Matrix.h"
 
+#define SYNC
+#define PROCS 10
+
 class JacobiCPU : public Thread {
 public:
-	JacobiCPU(Thread* distributor, MatrixRow** rows, Matrix *b, int* rowInd, int num, int size, int id);
+	JacobiCPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, Matrix *b, int* rowInd, int num, int size, int id);
 	JacobiCPU();
 
 	~JacobiCPU();
@@ -12,7 +15,7 @@ public:
 	/**
 	 * This is allows for array allocation
 	 */
-	void setControl(Thread* distributor, MatrixRow** rows, Matrix *b, int* rowInd, int num, int size, int id);
+	void setControl(Mailbox** distributor, Mailbox* master, MatrixRow** rows, Matrix *b, int* rowInd, int num, int size, int id);
 
 	/**
 	 * @Override
@@ -95,11 +98,14 @@ private:
 	int maxIter;
 	bool receive;
 	int id;
+	int readCt;
 	MatrixType *x;
 	Matrix *b;
 	MatrixType *sendBuf;
+	int* intBuf;
 	MatrixRow **rows;
-	Thread *xDistributor;
+	Mailbox **xDistribution;
+	Mailbox *master;
 	int *rowInd;
 	int size;
 	bool iterFlag;

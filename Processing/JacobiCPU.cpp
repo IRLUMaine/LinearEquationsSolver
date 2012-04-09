@@ -10,17 +10,20 @@
 #define RTHRESHOLD .01
 #define THRESHOLD .0001
 
-JacobiCPU::JacobiCPU(Thread* distributor, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
+JacobiCPU::JacobiCPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
 	this->rows = rows;
 	this->size = size;
 	this->rowInd = rowInd;
 	this->num = num;
 	this->b = b;
-	this->xDistributor = distributor;
+	this->xDistribution = distribution;
+	this->master = master;
 	this->mRun = true;
 	this->maxIter = 1;
 	this->x = new MatrixType[size];
 	this->id = id;
+	this->sendBuf = new MatrixType[num * 2];
+	this->intBuf = new int[2];
 
 	if (!this->x) {
 		perror("Problem allocating Solution Space or Send Buffer");
@@ -46,17 +49,21 @@ JacobiCPU::~JacobiCPU() {
 /**
  * This is allows for array allocation
  */
-void JacobiCPU::setControl(Thread* distributor, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
+void JacobiCPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
 	this->rows = rows;
 	this->size = size;
 	this->rowInd = rowInd;
 	this->num = num;
 	this->b = b;
-	this->xDistributor = distributor;
+	this->xDistribution = distribution;
+	this->master = master;
 	this->mRun = true;
 	this->maxIter = 1;
 	this->x = new MatrixType[size];
 	this->id = id;
+	this->sendBuf = new MatrixType[num * 2];
+	this->intBuf = new int[2];
+
 
 	if (!this->x) {
 		perror("Problem allocating Solution Space or Send Buffer");
@@ -81,13 +88,14 @@ void JacobiCPU::run() {
 	int c = 0;
 	while (mRun) {
 		receive = false;
-		readData();
 		iterFlag = true;
 		for (int i = 0; (i < maxIter) && iterFlag; i++) {
 			iterFlag = false;
 			procIter();
 		}
 		sendData();
+		readCt = 0;
+		while (mRun && readCt < (PROCS-1)) readData();
 	}
 }
 
@@ -97,9 +105,8 @@ void JacobiCPU::run() {
  * and send to it a networking thread to handle further distribution.
  */
 void JacobiCPU::sendData() {
-	if (xDistributor) {
+	if (xDistribution) {
 		this->send.setType(MatrixVals);
-		this->sendBuf = new MatrixType[num * 2];
 		if (!this->sendBuf) {
 			perror("Problem allocating Solution Space or Send Buffer");
 			this->size = 0;
@@ -113,21 +120,23 @@ void JacobiCPU::sendData() {
 			this->sendBuf[i] = x[rowInd[i]];
 		}
 		send.setData(sendBuf, num * 2 * sizeof(MatrixType));
-		if (!xDistributor->mailbox.isFull()) {
-			xDistributor->mailbox.addMessage(send);
+		for (int i = 0; xDistribution[i] != NULL; i++) {
+			xDistribution[i]->addMessage(send);
+		}
+		//if (!xDistributor->mailbox.isFull()) {
+		//	xDistributor->mailbox.addMessage(send);
 //		} else {
 //			printf("Distributor Box Full %d\n", id);
-		}
+		//}
 
-		if (!receive && !xDistributor->mailbox.isFull()) {
+		if (!receive && !master->isFull()) {
 			this->send.setType(ProcStatus);
-			int* intBuf = new int[2];
 
 			intBuf[0] = id;
 			intBuf[1] = !iterFlag;
 
 			send.setData(intBuf, 2*sizeof(int));
-			xDistributor->mailbox.addMessage(send);
+			master->addMessage(send);
 //		} else {
 //			printf("Distributor Box Full %d\n", id);
 		}
@@ -143,6 +152,7 @@ void JacobiCPU::readData() {
 	while (mailbox.hasMessage()) {
 		Message message = mailbox.getMessage();
 
+		readCt++;
 		handleMessage(message);
 	}
 }

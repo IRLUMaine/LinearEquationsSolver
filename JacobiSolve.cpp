@@ -7,7 +7,6 @@
 #include "Processing/Distributor.h"
 
 using namespace std;
-#define PROCS 4
 #define COMPLETE_THRESHOLD 5
 
 #define ROW 301
@@ -18,8 +17,8 @@ int main(int argc, char * argv[])
 	// Produce some classes
 	FastookReader reader("matrix.file");
 	JacobiCPU jacobiSolver[PROCS];
-	Distributor distributor[PROCS];
-	Mailbox collection;
+	//Distributor distributor[PROCS];
+	Mailbox collection[PROCS];
 	Mailbox *list[PROCS][PROCS];
 	int completeFlags[PROCS] = {0};
 	bool done = false;
@@ -27,7 +26,8 @@ int main(int argc, char * argv[])
 	// Setup which distributor controls which thread
 	// When PROC=1 these do essentially nothing
 	for (int i = 0; i < PROCS; i++) {
-		distributor[i].setControl(list[i], &jacobiSolver[i], &collection);
+		collection[i].setLocking(false);
+		//distributor[i].setControl(list[i], &jacobiSolver[i], &collection);
 	}
 
 	// Matrix setup stuff
@@ -83,55 +83,61 @@ int main(int argc, char * argv[])
 				break;
 			}
 		}
-		jacobiSolver[i].setControl(distributor + i, rows[i], reader.getB(), rowInd[i], j, height, i);
-		jacobiSolver[i].setMaxIter(1);
+		jacobiSolver[i].setControl(list[i], collection+i, rows[i], reader.getB(), rowInd[i], j, height, i);
+		jacobiSolver[i].setMaxIter(5);
 	}
 
 	// Start all threads
 	for (int i = 0; i < PROCS; i++) {
-		distributor[i].start();
+		//distributor[i].start();
 		jacobiSolver[i].start();
 	}
 	// Wait till everyone done.
 	while (!done) {
 		// Check for status messages
-		while (collection.hasMessage()) {
-			Message message = collection.getMessage();
-			if (message.getType() == ProcStatus) {
-				int* buf = (int *)message.getData();
-				if (buf[1]) {
-					// Wait a little bit after completion to make sure all are really done
-					// counting to some number solves this
-					completeFlags[buf[0]]++;
-				} else {
-					completeFlags[buf[0]] = 0;
-				}
-				done = true;
-				for (int i = 0; i < PROCS; i++) {
-					if (completeFlags[i] < COMPLETE_THRESHOLD) {
-						done = false;
-						break;
+		for (int i = 0; i < PROCS; i++) {
+			while (collection[i].hasMessage()) {
+				Message message = collection[i].getMessage();
+				if (message.getType() == ProcStatus) {
+					int* buf = (int *)message.getData();
+					if (buf[1]) {
+						// Wait a little bit after completion to make sure all are really done
+						// counting to some number solves this
+						completeFlags[buf[0]]++;
+					} else {
+						completeFlags[buf[0]] = 0;
 					}
+					done = true;
+					for (int i = 0; i < PROCS; i++) {
+						if (completeFlags[i] < COMPLETE_THRESHOLD) {
+							done = false;
+							break;
+						}
+					}
+				} else {
+					printf("Message %d\n", message.getType());
 				}
-			} else {
-				printf("Message %d\n", message.getType());
 			}
+			// Give up some CPU time.
 		}
-		// Give up some CPU time.
 		usleep(100);
 	}
 	// Stop the threads
 	// Distributors will stop when owner completes
+	printf("Stopping threads\n");
 	for (int i = 0; i < PROCS; i++) {
 		jacobiSolver[i].setRunning(false);
 		jacobiSolver[i].stop();
 	}
+/*
+	printf("Printing Results\n");
 	// Print some results.
-//	for (int j = 0; j < PROCS; j++) {
-//		for (int i = 0; i < size; i++) {
-//			printf("%lf\n", jacobiSolver[j].getX()[i + j * (size)]);
-//		}
-//	}
+	for (int j = 0; j < PROCS; j++) {
+		for (int i = 0; i < size; i++) {
+			printf("%lf\n", jacobiSolver[j].getX()[i + j * (size)]);
+		}
+	}
+*/
 //	for (int i = 0; i < PROCS; i++) {
 //		if (jacobiSolver[i].isAwake()) {
 //			jacobiSolver[i].stop();

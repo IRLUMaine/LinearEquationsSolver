@@ -12,7 +12,7 @@ BUILDDIR= objs/Matrix\
 CFLAGS=-O2 -g #-Wall
 NFLAGS=$(CFLAGS)# -arch sm_20
 LIBS=-lpthread
-NVCC=g++
+NVCC=nvcc
 
 .PHONY:all clean
 all:$(TARGET)

@@ -4,7 +4,7 @@
 #include "Message.h"
 
 #ifndef MAILBOX_SIZE
-#define MAILBOX_SIZE 16
+#define MAILBOX_SIZE 32
 #endif
 #define DEBUG
 
@@ -75,6 +75,8 @@ public:
 				messages[back] = message;
 				back++;
 				if (back == MAILBOX_SIZE) back = 0;
+			} else {
+				printf("Dropping Message Mailbox Full!\n");
 			}
 #ifdef DEBUG
 			if (debug) {

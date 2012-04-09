@@ -7,6 +7,7 @@ enum MessageType {
 	MatrixVals,
 	ProcStatus
 };
+//#define DEEP
 
 /**
  * Data that is given to a message will be freed/deleted by the message
@@ -29,16 +30,22 @@ public:
 	Message(const Message& message) {
 		this->type = message.type;
 		this->bytes = message.bytes;
+#ifdef DEEP
 		this->p = new char[bytes];
 		for (int i = 0; i < bytes; i++) {
 			((char*)this->p)[i] = ((char*)message.p)[i];
 		}
+#else
+		this->p = message.p;
+#endif
 	}
 
 	~Message() {
+#ifdef DEEP
 		if (this->p) {
 			delete[] (int*)this->p;
 		}
+#endif
 	}
 
 	/**
@@ -74,9 +81,11 @@ public:
 	 * Will be freed by Message.
 	 */
 	void setData(void *p, int bytes) {
+#ifdef DEEP
 		if (this->p) {
 			delete[] (int*)this->p;
 		}
+#endif
 		this->p = p;
 		this->bytes = bytes;
 	}
@@ -85,15 +94,21 @@ public:
 	 * Performs deep copy of data.
 	 */
 	Message &operator=(Message& message) {
+#ifdef DEEP
 		if (this->p) {
 			delete[] (int*)this->p;
 		}
+#endif //DEEP
 		this->type = message.type;
 		this->bytes = message.bytes;
+#ifdef DEEP
 		this->p = new char[bytes];
 		for (int i = 0; i < bytes; i++) {
 			((char*)this->p)[i] = ((char*)message.p)[i];
 		}
+#else
+		this->p = message.p;
+#endif
 
 		return message;
 	}
