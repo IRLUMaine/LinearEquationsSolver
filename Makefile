@@ -3,6 +3,8 @@ SRCS=JacobiSolve.cpp \
 	Matrix/SparseMatrix.cpp \
 	Communication/Thread.cpp \
 	Processing/JacobiCPU.cpp \
+	Processing/JacobiGPU.cpp \
+	Processing/JacobiGPU.cu \
 	Processing/Distributor.cpp
 OBJDIR=objs
 OBJS=$(patsubst %.cpp,$(OBJDIR)/%.o,$(SRCS))

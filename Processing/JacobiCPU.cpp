@@ -7,7 +7,7 @@
 #include "JacobiCPU.h"
 #include "../Matrix/SparseRow.h"
 
-#define RTHRESHOLD .01
+#define RTHRESHOLD .001
 #define THRESHOLD .0001
 
 JacobiCPU::JacobiCPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {

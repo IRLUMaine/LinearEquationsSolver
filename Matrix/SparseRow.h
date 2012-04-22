@@ -152,6 +152,14 @@ public:
 	    return other;
 	}
 
+	MatrixType* getValues() {
+		return values;
+	}
+
+	int* getIndexs() {
+		return index;
+	}
+
 private:
 	MatrixType* values;
 	int* index;

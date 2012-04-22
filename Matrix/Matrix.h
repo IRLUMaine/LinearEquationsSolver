@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <cmath>
 
-typedef double MatrixType;
+typedef float MatrixType;
 #include "MatrixRow.h"
 
 /**

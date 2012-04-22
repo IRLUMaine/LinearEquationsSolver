@@ -3,7 +3,7 @@
 #include "../Matrix/Matrix.h"
 
 #define SYNC
-#define PROCS 10
+#define PROCS 11
 
 class JacobiCPU : public Thread {
 public:
