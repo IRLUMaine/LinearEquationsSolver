@@ -97,7 +97,7 @@ public:
 			A = new SparseMatrix(rows, maxRow);
 		} else {
 			cout << "Creating Matrix size: " << rows << " " << endl;
-			A = new SparseMatrix(rows);
+			A = new SparseMatrix(rows, 10);
 		}
 		cout << "Creating Matrix size: " << rows << " " << endl;
 		x = new Matrix(rows, 1);
@@ -110,9 +110,9 @@ public:
 
 			getline(file, line);
 			sscanf(line.c_str(), "%d", &rsize);
-			if (maxRow == -1) {
-				A->setRow(r, new SparseRow(rsize));
-			}
+//			if (maxRow == -1) {
+//				A->setRow(r, new SparseRow(rsize + 1));
+//			}
 
 			// Loop through each non-zero in the row
 			for (int ct = 0; ct < rsize; ct++) {
@@ -120,8 +120,14 @@ public:
 				float val;
 				getline(file, line);
 				sscanf(line.c_str(), "%d %d %g", &rIndex, &cIndex, &val);
+				if ((rIndex - 1) != r) {
+					printf("Row Inconsistency: %d %d\n", r, rIndex - 1);
+					exit(1);
+				}
 
-				A->getRowS(rIndex-1)->addVal(cIndex-1, (MatrixType)val);
+				if (val != 0) {
+					A->getRowS(rIndex-1)->addVal(cIndex-1, (MatrixType)val);
+				}
 			}
 		}
 		cout << "Done getting A" << endl;

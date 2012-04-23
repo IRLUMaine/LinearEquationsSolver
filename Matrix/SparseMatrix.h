@@ -21,7 +21,7 @@ public:
 	 * When this constructor is used all of the rows must be set
 	 * using the setRow function.
 	 */
-	SparseMatrix(int nrows);
+	//SparseMatrix(int nrows);
 
 	SparseMatrix(const SparseMatrix& other);
 
@@ -116,10 +116,10 @@ public:
         Matrix matrix(nrow, otherWidth);
 
         for (int i = 0; i < nrow; i++) {
-            if (((double)i) / nrow > percent) {
-                printf("%lf\n", 100*percent);
-                percent += .001;
-            }
+            //if (((double)i) / nrow > percent) {
+                //printf("%lf\n", 100*percent);
+            //    percent += .001;
+            //}
             for (int j = 0; j < otherWidth; j++) {
                 MatrixType sum = 0;
 				SparseRow *row = getRowS(i);
@@ -134,11 +134,20 @@ public:
         }
 
         return matrix;
+	}
 
+	MatrixType* getRawValues() {
+		return values;
+	}
+
+	int* getRawIndexs() {
+		return indexs;
 	}
 
 private:
 	SparseRow** rows;
+	MatrixType* values;
+	int* indexs;
 	int *count;
 	int nrows;
 };

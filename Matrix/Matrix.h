@@ -24,6 +24,10 @@ public:
 	Matrix(int nrow, int ncol) {
 		this->nrow = nrow;
 		this->ncol = ncol;
+		this->rows = (MatrixRow**)malloc(sizeof(MatrixRow*) * nrow);
+		for (int i = 0; i < nrow; i++) {
+			this->rows[i] = NULL;
+		}
 		matrix = (MatrixType*) malloc((ncol * nrow + 1) * sizeof(MatrixType));
 		if (matrix == NULL) {
 			this->nrow = 0;
@@ -42,6 +46,7 @@ public:
 		this->nrow = other.nrow;
 		this->ncol = other.ncol;
 		this->matrix = other.matrix;
+		this->rows = other.rows;
 		matrix[-1]++;
 	}
 
@@ -64,6 +69,12 @@ public:
 			matrix[0]--;
 			if (matrix[0] == 0) {
 				free(matrix);
+				for (int i = 0; i < nrow; i++) {
+					if (rows[i] != NULL) {
+						//free(rows[i]);
+					}
+				}
+				free(rows);
 			}
 		}
 	}
@@ -94,9 +105,11 @@ public:
 	 * allows efficient access regardless of type.
 	 */
 	virtual MatrixRow *getRow(int i) {
-		printf("ALLOCATION!\n");
 		if (i < nrow) {
-			return new MatrixRow(&matrix[i*ncol], ncol);
+			if (rows[i] == NULL) {
+				rows[i] = new MatrixRow(&matrix[i*ncol], ncol);
+			}
+			return rows[i];
 		} else {
 			return new MatrixRow();
 		}
@@ -201,14 +214,23 @@ public:
 	 * For smart allocation and freeing.
 	 */
 	Matrix &operator=(const Matrix &other)  {
-		matrix[-1]--;
-		if (matrix[-1] == 0) {
-			free(--matrix);
+		if (matrix != NULL) {
+			matrix[-1]--;
+			if (matrix[-1] == 0) {
+				free(--matrix);
+				for (int i = 0; i < nrow; i++) {
+					if (rows[i] != NULL) {
+						free(rows[i]);
+					}
+				}
+				free(rows);
+			}
 		}
 
 		this->nrow = other.nrow;
 		this->ncol = other.ncol;
 		this->matrix = other.matrix;
+		this->rows = other.rows;
 		matrix[-1]++;
 
 		return *this;
@@ -218,8 +240,13 @@ public:
 		return *getRow(index);
 	}
 
+	MatrixType* getRaw() {
+		return matrix;
+	}
+
 private:
 	MatrixType* matrix;
+	MatrixRow** rows;
 	int nrow;
 	int ncol;
 };

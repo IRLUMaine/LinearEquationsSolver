@@ -5,15 +5,17 @@ SRCS=JacobiSolve.cpp \
 	Processing/JacobiCPU.cpp \
 	Processing/JacobiGPU.cpp \
 	Processing/JacobiGPU.cu \
+	Processing/ResidualCalculator.cpp \
 	Processing/Distributor.cpp
 OBJDIR=objs
-OBJS=$(patsubst %.cpp,$(OBJDIR)/%.o,$(SRCS))
+OBJS1=$(patsubst %.cpp,$(OBJDIR)/%.o,$(SRCS))
+OBJS=$(patsubst %.cu,$(OBJDIR)/%CU.o,$(OBJS1))
 BUILDDIR= objs/Matrix\
 		  objs/Communication\
 		  objs/Processing
-CFLAGS=-O2 -g #-Wall
-NFLAGS=$(CFLAGS)# -arch sm_20
-LIBS=-lpthread
+CFLAGS=-O3 #-Wall
+NFLAGS=$(CFLAGS) -arch sm_20
+LIBS=-lpthread -lrt
 NVCC=nvcc
 
 .PHONY:all clean
@@ -28,7 +30,7 @@ $(OBJDIR)/%.o : %.cpp
 $(OBJDIR)/%.o : %.c
 	$(NVCC) -c -o $@ $(NFLAGS) $<
 
-$(OBJDIR)/%.o : %.cu
+$(OBJDIR)/%CU.o : %.cu
 	$(NVCC) -c -o $@ $(NFLAGS) $<
 
 clean:

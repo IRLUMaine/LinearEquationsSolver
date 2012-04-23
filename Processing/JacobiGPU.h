@@ -1,9 +1,14 @@
 #pragma once
 #include "../Communication/Thread.h"
 #include "../Matrix/Matrix.h"
+#include "../Util/Timer.h"
 
 #define SYNC
-#define PROCS 10
+
+#define cudaSafe(x, y) if ((error = x) != cudaSuccess) {\
+	printf("%s Error: %s\n", y, cudaGetErrorString(error));\
+	exit(1);\
+	}
 
 class JacobiGPU : public Thread {
 public:
@@ -112,6 +117,7 @@ private:
 	Message send;
 
 	// Added for CUDA Support
+	int varPBlock;
 	int maxRow;
 	MatrixType *dXs;
 	MatrixType *dNextXs;
@@ -119,4 +125,10 @@ private:
 	MatrixType *dRowVals;
 	int *dRowInds;
 	MatrixType *dYs;
+	int *dDiffs;
+	int *hDiffs;
+
+	// Added for timing support
+	Timer* iterCt;
+	Timer* sendCt;
 };

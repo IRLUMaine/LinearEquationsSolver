@@ -5,16 +5,13 @@
  *      Author: jmonk
  */
 #include "JacobiGPU.h"
+#include "JacobiCPU.h"
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
+#include <sys/time.h>
 #include "../Matrix/SparseRow.h"
 
-#define RTHRESHOLD .01
-#define THRESHOLD .0001
-
-extern "C" {
-void computeIterations(int maxRow, MatrixType *dXs, MatrixType *dNextXs, int *dIndexs, MatrixType *dRowVals, int *dRowInds, MatrixType *dYs);
-}
+void computeIterations(int varPBlock, int maxRow, int num, int size, int iter, MatrixType *dXs, MatrixType *dNextXs, int *dIndexs, MatrixType *dRowVals, int *dRowInds, MatrixType *dYs, int *dDiffs);
 
 JacobiGPU::JacobiGPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
 	setControl(distribution, master, rows, b, rowInd, num, size, id);
@@ -27,6 +24,8 @@ JacobiGPU::~JacobiGPU() {
 	if (this->x) {
 		delete[] this->x;
 	}
+	delete iterCt;
+	delete sendCt;
 }
 
 /**
@@ -46,6 +45,11 @@ void JacobiGPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** 
 	this->id = id;
 	this->sendBuf = new MatrixType[num * 2];
 	this->intBuf = new int[2];
+	this->varPBlock = 1024;
+	this->iterCt = new Timer("Iter");
+	this->sendCt = new Timer("Send");
+	Timer setup("Setup");
+	setup.start();
 
 	if (!this->x) {
 		perror("Problem allocating Solution Space or Send Buffer");
@@ -53,6 +57,8 @@ void JacobiGPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** 
 		this->num = 0;
 		return;
 	}
+	cudaError_t error;
+	//cudaSafe(cudaSetDevice(1), "Set Device");
 
 	for (int i = 0; i < size; i++) {
 		this->x[i] = 1;
@@ -62,27 +68,49 @@ void JacobiGPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** 
 	// Also some row fixing
 	maxRow = 0;
 	for (int i = 0; i < num; i++) {
-		int max = ((SparseRow*)rows[i])->getMax();
+		int max = ((SparseRow*)rows[i])->getCnt();
 		if (max > maxRow) {
 			maxRow = max;
 		}
 	}
-	cudaMalloc((void **)&dXs, sizeof(MatrixType) * size);
-	cudaMalloc((void **)&dNextXs, sizeof(MatrixType) * size);
-	cudaMemset((void *)dXs, 0, sizeof(MatrixType) * size);
+	maxRow++;
+	cudaSafe(cudaMalloc((void **)&dXs, sizeof(MatrixType) * size), "Malloc Xs");
+	//cudaSafe(cudaMalloc((void **)&dNextXs, sizeof(MatrixType) * size), "Malloc NXs");
+	cudaSafe(cudaMemset((void *)dXs, 0, sizeof(MatrixType) * size), "Memset Xs");
 
-	cudaMalloc((void **)&dIndexs, sizeof(int) * num);
-	cudaMalloc((void **)&dRowVals, sizeof(MatrixType) * num * maxRow);
-	cudaMalloc((void **)&dRowInds, sizeof(int) * num * maxRow);
-	cudaMalloc((void **)&dYs, sizeof(MatrixType) * size);
+	cudaSafe(cudaMalloc((void **)&dIndexs, sizeof(int) * num), "Malloc Indexes");
 
-	cudaMemcpy(b, dYs, sizeof(MatrixType) * size, cudaMemcpyHostToDevice); 
-	cudaMemcpy(rowInd, dIndexs, sizeof(int) * num, cudaMemcpyHostToDevice); 
+	printf("Rows take: %d\n", sizeof(MatrixType) * num * maxRow);
+	cudaSafe(cudaMalloc((void **)&dRowVals, sizeof(MatrixType) * num * maxRow), "Malloc RowVals");
+	cudaSafe(cudaMalloc((void **)&dRowInds, sizeof(int) * num * maxRow), "Malloc RowInds");
+	cudaSafe(cudaMalloc((void **)&dYs, sizeof(MatrixType) * size), "Malloc Ys");
+	cudaSafe(cudaMalloc((void **)&dDiffs, sizeof(MatrixType) * (num/1024 + 1)), "Malloc Diffs");
+	cudaSafe(cudaMallocHost((void **)&hDiffs, sizeof(MatrixType) * (num/1024 + 1)), "Malloc Host Diffs");
+
+	cudaSafe(cudaMemcpy(dYs, b->getRaw(), sizeof(MatrixType) * size, cudaMemcpyHostToDevice), "Memcpy Ys"); 
+	printf("Y is %lf\n", (*b)[164892][0]);
+
+	cudaSafe(cudaMemcpy(dIndexs, rowInd, sizeof(int) * num, cudaMemcpyHostToDevice), "Memcpy Indexes");
+    struct timeval t;
+    double time1, time2;
+
+    gettimeofday(&t, NULL);
+    time1 = t.tv_sec + (t.tv_usec / 1000000.0);
+ 
+	printf("MaxRow: %d\n", maxRow);
+	cudaSafe(cudaMemcpy(dRowVals, ((SparseRow*)rows[0])->getValues(), sizeof(MatrixType) * maxRow * num, cudaMemcpyHostToDevice), "Memcpy RowVals");
+	cudaSafe(cudaMemcpy(dRowInds, ((SparseRow*)rows[0])->getIndexs(), sizeof(int) * maxRow * num, cudaMemcpyHostToDevice), "Memcpy RowInds");
+/*
 	for (int i = 0; i < num; i++) {
 		SparseRow *row = (SparseRow*)rows[i];
-		cudaMemcpy(row->getValues(), dRowVals + (i * maxRow), sizeof(MatrixType) * maxRow, cudaMemcpyHostToDevice);
-		cudaMemcpy(row->getIndexs(), dRowInds + (i * maxRow), sizeof(int) * maxRow, cudaMemcpyHostToDevice);
+		cudaSafe(cudaMemcpy(dRowVals + (i * maxRow), row->getValues(), sizeof(MatrixType) * maxRow, cudaMemcpyHostToDevice), "Memcpy RowVals");
+		cudaSafe(cudaMemcpy(dRowInds + (i * maxRow), row->getIndexs(), sizeof(int) * maxRow, cudaMemcpyHostToDevice), "Memcpy RowInds");
 	}
+*/
+	
+	printf("Init Complete\n");
+
+	setup.stop();
 }
 
 /**
@@ -94,17 +122,27 @@ void JacobiGPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** 
  */
 void JacobiGPU::run() {
 	int c = 0;
+	Timer proctimer("Processing");
+	proctimer.start();
+
 	while (mRun) {
 		receive = false;
-		iterFlag = true;
-		for (int i = 0; (i < maxIter) && iterFlag; i++) {
-			iterFlag = false;
-			procIter();
-		}
+		//iterFlag = true;
+		iterCt->start();
+		computeIterations(varPBlock, maxRow, num, size, maxIter, dXs, dNextXs, dIndexs, dRowVals, dRowInds, dYs, dDiffs);
+		iterCt->stop();
+		//for (int i = 0; (i < maxIter) && iterFlag; i++) {
+		//	iterFlag = false;
+		//	procIter();
+		//}
+		sendCt->start();
 		sendData();
+		sendCt->stop();
 		readCt = 0;
 		while (mRun && readCt < (PROCS-1)) readData();
 	}
+
+	proctimer.stop();
 }
 
 /**
@@ -114,6 +152,8 @@ void JacobiGPU::run() {
  */
 void JacobiGPU::sendData() {
 	if (xDistribution) {
+		cudaError_t error;
+		cudaSafe(cudaMemcpy(x, dXs, sizeof(MatrixType) * size, cudaMemcpyDeviceToHost), "Memcpy X Vals"); 
 		this->send.setType(MatrixVals);
 		if (!this->sendBuf) {
 			perror("Problem allocating Solution Space or Send Buffer");
@@ -137,6 +177,23 @@ void JacobiGPU::sendData() {
 //			printf("Distributor Box Full %d\n", id);
 		//}
 
+		cudaSafe(cudaMemcpy(hDiffs, dDiffs, sizeof(MatrixType) * (num/1024 + 1), cudaMemcpyDeviceToHost), "Memcpy Diffs"); 
+		int size = num/1024;
+		if (1024 * size != num) {
+			size++;
+		}
+		iterFlag = false;
+		//MatrixType max = 0;
+		for (int i = 0; i < num; i++) {
+			if (hDiffs[i] > 0) {
+				iterFlag = true;
+				break;
+			}
+			//if (hDiffs[i] > max) {
+			//	max = hDiffs[i];
+			//}
+		}
+		//printf("Max is %g\n", max);
 		if (!receive && !master->isFull()) {
 			this->send.setType(ProcStatus);
 
@@ -211,9 +268,9 @@ void JacobiGPU::procIter() {
 		} while (row->next());
 		newVal[i] /= row->getValue(current);
 
-		if (fabs(x[current] - newVal[i]) > (RTHRESHOLD * fabs(x[i]) + THRESHOLD)) {
-			iterFlag = true;
-		}
+		//if (fabs(x[current] - newVal[i]) > (RTHRESHOLD * fabs(x[i]) + THRESHOLD)) {
+		//	iterFlag = true;
+		//}
 	}
 	for (i = 0; i < num; i++) {
 		current = rowInd[i];

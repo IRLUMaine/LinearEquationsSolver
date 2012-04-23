@@ -4,24 +4,40 @@
 #include "Communication/Thread.h"
 #include "Communication/Message.h"
 #include "Processing/JacobiCPU.h"
+#include "Processing/JacobiGPU.h"
 #include "Processing/Distributor.h"
+#include "Processing/ResidualCalculator.h"
+#include "Util/Timer.h"
+
+#define Solver JacobiGPU
 
 using namespace std;
-#define COMPLETE_THRESHOLD 5
+#define COMPLETE_THRESHOLD 1
+//5
 
 #define ROW 301
 #define COL 561
 
 int main(int argc, char * argv[])
 {
+	Timer setup("Read");
+	Timer comp("Computation");
+	setup.start();
 	// Produce some classes
 	FastookReader reader("matrix.file");
-	JacobiCPU jacobiSolver[PROCS];
+	Solver jacobiSolver[PROCS];
 	//Distributor distributor[PROCS];
 	Mailbox collection[PROCS];
-	Mailbox *list[PROCS][PROCS];
+	Mailbox *list[PROCS][PROCS+1];
+	FILE *file;
 	int completeFlags[PROCS] = {0};
 	bool done = false;
+
+	if (argc > 1) {
+		file = fopen(argv[1], "w");
+	} else {
+		file = fopen("output", "w");
+	}
 
 	// Setup which distributor controls which thread
 	// When PROC=1 these do essentially nothing
@@ -36,6 +52,7 @@ int main(int argc, char * argv[])
 	int* rowInd[PROCS];
 	int height = reader.getA()->getHeight();
 	int size = height/PROCS;
+	ResidualCalculator res(reader.getA(), reader.getB(), reader.getX());
 
 	// Allocate memory for row pointer storage
 	// Setup distribution lists
@@ -56,6 +73,7 @@ int main(int argc, char * argv[])
 		for (int j = i+1; j < PROCS; j++) {
 			list[i][j-1] = &jacobiSolver[j].mailbox;
 		}
+		//list[i][PROCS-1] = &res.mailbox;
 		list[i][PROCS-1] = NULL;
 	}
 
@@ -72,6 +90,8 @@ int main(int argc, char * argv[])
 			}
 		}
 	}
+	setup.stop();
+	comp.start();
 
 	// Finally give setup control data to jacobi PROCS
 	// Also setup max number of iterations between comm
@@ -84,7 +104,7 @@ int main(int argc, char * argv[])
 			}
 		}
 		jacobiSolver[i].setControl(list[i], collection+i, rows[i], reader.getB(), rowInd[i], j, height, i);
-		jacobiSolver[i].setMaxIter(5);
+		jacobiSolver[i].setMaxIter(14);
 	}
 
 	// Start all threads
@@ -92,6 +112,7 @@ int main(int argc, char * argv[])
 		//distributor[i].start();
 		jacobiSolver[i].start();
 	}
+	//res.start();
 	// Wait till everyone done.
 	while (!done) {
 		// Check for status messages
@@ -118,7 +139,7 @@ int main(int argc, char * argv[])
 					printf("Message %d\n", message.getType());
 				}
 			}
-			// Give up some CPU time.
+			// Give up some GPU time.
 		}
 		usleep(100);
 	}
@@ -129,15 +150,15 @@ int main(int argc, char * argv[])
 		jacobiSolver[i].setRunning(false);
 		jacobiSolver[i].stop();
 	}
-/*
-	printf("Printing Results\n");
+	res.mRun = false;
+	comp.stop();
+	//res.stop();
 	// Print some results.
 	for (int j = 0; j < PROCS; j++) {
 		for (int i = 0; i < size; i++) {
-			printf("%lf\n", jacobiSolver[j].getX()[i + j * (size)]);
+			fprintf(file, "%lf\n", jacobiSolver[j].getX()[i + j * (size)]);
 		}
 	}
-*/
 //	for (int i = 0; i < PROCS; i++) {
 //		if (jacobiSolver[i].isAwake()) {
 //			jacobiSolver[i].stop();
@@ -164,7 +185,7 @@ sys	0m0.003s
 //int main(int argc, char * argv[])
 //{
 //	FastookReader reader("matrix.file");
-//	JacobiCPU jacobiSolver;
+//	Solver jacobiSolver;
 //
 //	reader.readFile();
 //	MatrixRow** rows = new MatrixRow*[reader.getA()->getHeight()];

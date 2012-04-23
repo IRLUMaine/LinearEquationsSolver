@@ -1,61 +1,37 @@
 /*
- * JacobiCPU.cpp
+ * JacobiGPU.cpp
  *
- *  Created on: Mar 26, 2012
+ *  Created on: Apr 9, 2012
  *      Author: jmonk
  */
+#include "JacobiGPU.h"
 #include "JacobiCPU.h"
-#include <sys/time.h>
-
+#include <cuda_runtime.h>
+#include <cuda_runtime_api.h>
 #include "../Matrix/SparseRow.h"
 
-#define RTHRESHOLD .001
-#define THRESHOLD .001
+#define RTHRESHOLD .01
+#define THRESHOLD .0001
 
-JacobiCPU::JacobiCPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
-	this->rows = rows;
-	this->size = size;
-	this->rowInd = rowInd;
-	this->num = num;
-	this->b = b;
-	this->xDistribution = distribution;
-	this->master = master;
-	this->mRun = true;
-	this->maxIter = 1;
-	this->x = new MatrixType[size];
-	this->id = id;
-	this->sendBuf = new MatrixType[num * 2];
-	this->intBuf = new int[2];
-    this->iterCt = new Timer("Iter");
-    this->sendCt = new Timer("Send");
+void computeIterations(int varPBlock, int maxRow, int num, int size, int iter, MatrixType *dXs, MatrixType *dNextXs, int *dIndexs, MatrixType *dRowVals, int *dRowInds, MatrixType *dYs, MatrixType *dDiffs);
 
-	if (!this->x) {
-		perror("Problem allocating Solution Space or Send Buffer");
-		this->size = 0;
-		this->num = 0;
-		return;
-	}
-
-	for (int i = 0; i < size; i++) {
-		this->x[i] = 1;
-	}
+JacobiGPU::JacobiGPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id, int varPBlock) {
+	setControl(distribution, master, rows, b, rowInd, num, size, id, varPBlock);
 }
 
-JacobiCPU::JacobiCPU() {
+JacobiGPU::JacobiGPU() {
 }
 
-JacobiCPU::~JacobiCPU() {
+JacobiGPU::~JacobiGPU() {
 	if (this->x) {
 		delete[] this->x;
 	}
-    delete iterCt;
-    delete sendCt;
 }
 
 /**
  * This is allows for array allocation
  */
-void JacobiCPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
+void JacobiGPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id, int varPBlock) {
 	this->rows = rows;
 	this->size = size;
 	this->rowInd = rowInd;
@@ -69,10 +45,7 @@ void JacobiCPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** 
 	this->id = id;
 	this->sendBuf = new MatrixType[num * 2];
 	this->intBuf = new int[2];
-    this->iterCt = new Timer("Iter");
-    this->sendCt = new Timer("Send");
-
-
+	this->varPBlock = varPBlock;
 
 	if (!this->x) {
 		perror("Problem allocating Solution Space or Send Buffer");
@@ -80,46 +53,74 @@ void JacobiCPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** 
 		this->num = 0;
 		return;
 	}
+	cudaError_t error;
+	cudaSetDevice(1);
 
 	for (int i = 0; i < size; i++) {
 		this->x[i] = 1;
 	}
+
+	// Following section needs some error checking
+	// Also some row fixing
+	maxRow = 0;
+	for (int i = 0; i < num; i++) {
+		int max = ((SparseRow*)rows[i])->getMax();
+		if (max > maxRow) {
+			maxRow = max;
+		}
+	}
+	cudaSafe(cudaMalloc((void **)&dXs, sizeof(MatrixType) * size), "Malloc Xs");
+	cudaSafe(cudaMalloc((void **)&dNextXs, sizeof(MatrixType) * size), "Malloc NXs");
+	cudaSafe(cudaMemset((void *)dXs, 0, sizeof(MatrixType) * size), "Memset Xs");
+
+	cudaSafe(cudaMalloc((void **)&dIndexs, sizeof(int) * num), "Malloc Indexes");
+
+
+	cudaSafe(cudaMalloc((void **)&dRowVals, sizeof(MatrixType) * num * maxRow), "Malloc RowVals");
+	cudaSafe(cudaMalloc((void **)&dRowInds, sizeof(int) * num * maxRow), "Malloc RowInds");
+	cudaSafe(cudaMalloc((void **)&dYs, sizeof(MatrixType) * size), "Malloc Ys");
+	cudaSafe(cudaMalloc((void **)&dDiffs, sizeof(MatrixType) * (num/1024 + 1)), "Malloc Diffs");
+	cudaSafe(cudaMallocHost((void **)&hDiffs, sizeof(MatrixType) * (num/1024 + 1)), "Malloc Host Diffs");
+
+	cudaSafe(cudaMemcpy(dYs, b, sizeof(MatrixType) * size, cudaMemcpyHostToDevice), "Memcpy Ys"); 
+	if (rowInd == NULL) {
+		printf ("rowInd null\n");
+	}
+	if (dIndexs == NULL) {
+		printf ("dIndexs null\n");
+	}
+	printf("copying to %p\n", dIndexs);
+	cudaSafe(cudaMemcpy(dIndexs, rowInd, sizeof(int) * num, cudaMemcpyHostToDevice), "Memcpy Indexes");
+ 
+	for (int i = 0; i < num; i++) {
+		SparseRow *row = (SparseRow*)rows[i];
+		cudaSafe(cudaMemcpy(dRowVals + (i * maxRow), row->getValues(), sizeof(MatrixType) * maxRow, cudaMemcpyHostToDevice), "Memcpy RowVals");
+		cudaSafe(cudaMemcpy(dRowInds + (i * maxRow), row->getIndexs(), sizeof(int) * maxRow, cudaMemcpyHostToDevice), "Memcpy RowInds");
+	}
+	printf("Init Complete\n");
 }
 
 /**
  * @Override
  *
- * This will put the JacobiCPU into a processing
+ * This will put the JacobiGPU into a processing
  * mode where it will run until mRun is set to false
  * using setRunning
  */
-void JacobiCPU::run() {
+void JacobiGPU::run() {
 	int c = 0;
-
-    struct timeval t;
-    double time1, time2;
-    gettimeofday(&t, NULL);
-    time1 = t.tv_sec + (t.tv_usec / 1000000.0);
-
 	while (mRun) {
 		receive = false;
-		iterFlag = true;
-		for (int i = 0; (i < maxIter) && iterFlag; i++) {
-			iterFlag = false;
-			iterCt->start();
-			procIter();
-			iterCt->stop();
-		}
-		sendCt->start();
+		//iterFlag = true;
+		computeIterations(varPBlock, maxRow, num, size, maxIter, dXs, dNextXs, dIndexs, dRowVals, dRowInds, dYs, dDiffs);
+		//for (int i = 0; (i < maxIter) && iterFlag; i++) {
+		//	iterFlag = false;
+		//	procIter();
+		//}
 		sendData();
-		sendCt->stop();
 		readCt = 0;
 		while (mRun && readCt < (PROCS-1)) readData();
 	}
-    gettimeofday(&t, NULL);
-    time2 = t.tv_sec + (t.tv_usec / 1000000.0);
-    printf("Proc Time: %lf\n", time2 - time1);
-
 }
 
 /**
@@ -127,8 +128,9 @@ void JacobiCPU::run() {
  * has occured in each step. This will gather the data required
  * and send to it a networking thread to handle further distribution.
  */
-void JacobiCPU::sendData() {
+void JacobiGPU::sendData() {
 	if (xDistribution) {
+		cudaMemcpy(dXs, x, sizeof(MatrixType) * size, cudaMemcpyDeviceToHost); 
 		this->send.setType(MatrixVals);
 		if (!this->sendBuf) {
 			perror("Problem allocating Solution Space or Send Buffer");
@@ -146,13 +148,28 @@ void JacobiCPU::sendData() {
 		for (int i = 0; xDistribution[i] != NULL; i++) {
 			xDistribution[i]->addMessage(send);
 		}
-		//printf("Send Iter\n");
 		//if (!xDistributor->mailbox.isFull()) {
 		//	xDistributor->mailbox.addMessage(send);
 //		} else {
 //			printf("Distributor Box Full %d\n", id);
 		//}
 
+		cudaMemcpy(dDiffs, hDiffs, sizeof(MatrixType) * (num/1024 + 1), cudaMemcpyDeviceToHost); 
+		int size = num/1024;
+		if (1024 * size != num) {
+			size++;
+		}
+		iterFlag = true;
+		MatrixType max = 0;
+		for (int i = 0; i < size; i++) {
+			if (hDiffs[i] > THRESHOLD) {
+				iterFlag = false;
+			}
+			if (hDiffs[i] > max) {
+				max = hDiffs[i];
+			}
+		}
+		printf("Max is %lf\n", max);
 		if (!receive && !master->isFull()) {
 			this->send.setType(ProcStatus);
 
@@ -172,7 +189,7 @@ void JacobiCPU::sendData() {
  * accordingly. This can include changes to config as well as updated
  * x information.
  */
-void JacobiCPU::readData() {
+void JacobiGPU::readData() {
 	while (mailbox.hasMessage()) {
 		Message message = mailbox.getMessage();
 
@@ -184,7 +201,7 @@ void JacobiCPU::readData() {
 /**
  * This is called every time a message is received and needs to be parsed.
  */
-void JacobiCPU::handleMessage(Message& message) {
+void JacobiGPU::handleMessage(Message& message) {
 	switch (message.getType()) {
 	case NoMessage:
 //		printf("Message: NoMessage\n");
@@ -210,7 +227,7 @@ void JacobiCPU::handleMessage(Message& message) {
  * This will be called for each iteration to be processed and will
  * update x with the new values.
  */
-void JacobiCPU::procIter() {
+void JacobiGPU::procIter() {
 	int current;
 	int i, j;
 	MatrixType newVal[num];
@@ -237,5 +254,4 @@ void JacobiCPU::procIter() {
 		x[current] = (NWEIGHT * newVal[i] + LWEIGHT * x[current]) / (NWEIGHT + LWEIGHT);
 	}
 }
-
 

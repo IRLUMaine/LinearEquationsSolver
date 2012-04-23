@@ -4,13 +4,15 @@
 SparseMatrix::SparseMatrix(int nrows, int ncolmax) {
 	this->nrows = nrows;
 	this->rows = (SparseRow**)malloc(nrows * sizeof(SparseRow*));
+	this->values = (MatrixType*)malloc(nrows * ncolmax * sizeof(MatrixType));
+	this->indexs = (int*)malloc(nrows * ncolmax * sizeof(int));
 	if (rows == NULL) {
 		this->nrows = 0;
 	}
 
 	for (int i = 0; i < nrows; i++) {
-		printf("ALLOCATION!\n");
-		this->rows[i] = new SparseRow(ncolmax);
+		this->rows[i] = new SparseRow(ncolmax, values + (i * ncolmax),
+											indexs + (i * ncolmax));
 	}
 	this->count = (int*)malloc(sizeof(int));
 
@@ -20,23 +22,23 @@ SparseMatrix::SparseMatrix(int nrows, int ncolmax) {
 	this->count[0] = 1;
 }
 
-SparseMatrix::SparseMatrix(int nrows) {
-	this->nrows = nrows;
-	this->rows = (SparseRow**)malloc(nrows * sizeof(SparseRow*));
-	if (rows == NULL) {
-		this->nrows = 0;
-	}
-
-	for (int i = 0; i < nrows; i++) {
-		this->rows[i] = NULL;
-	}
-	this->count = (int*)malloc(sizeof(int));
-
-	// Too lazy for ton of checks
-	// if null pointer exception on
-	// this line then allocation failed
-	this->count[0] = 1;
-}
+//SparseMatrix::SparseMatrix(int nrows) {
+//	this->nrows = nrows;
+//	this->rows = (SparseRow**)malloc(nrows * sizeof(SparseRow*));
+//	if (rows == NULL) {
+//		this->nrows = 0;
+//	}
+//
+//	for (int i = 0; i < nrows; i++) {
+//		this->rows[i] = NULL;
+//	}
+//	this->count = (int*)malloc(sizeof(int));
+//
+//	// Too lazy for ton of checks
+//	// if null pointer exception on
+//	// this line then allocation failed
+//	this->count[0] = 1;
+//}
 
 SparseMatrix::SparseMatrix(const SparseMatrix& other) {
 	this->count = other.count;
@@ -55,6 +57,8 @@ SparseMatrix &SparseMatrix::operator=(SparseMatrix& other) {
         }
         free(rows);
         free(count);
+        free(values);
+        free(indexs);
     }
 
     this->count = other.count;
@@ -75,6 +79,8 @@ SparseMatrix::~SparseMatrix() {
 		}
 		free(rows);
         free(count);
+        free(values);
+        free(indexs);
 	}
 }
 

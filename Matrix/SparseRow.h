@@ -14,10 +14,10 @@ public:
 	/**
 	 * Creates an empty sparse row. It can only hold a maximum of size elements.
 	 */
-	SparseRow(int size) {
+	SparseRow(int size, MatrixType* values, int* indexs) {
 	    this->size = size;
-	    this->values = (MatrixType*)malloc(size * sizeof(MatrixType));
-	    this->index = (int*)malloc(size * sizeof(MatrixType));
+	    this->values = values;//(MatrixType*)malloc(size * sizeof(MatrixType));
+	    this->index = indexs;//(int*)malloc(size * sizeof(int));
 	    if ((values == NULL) && (index == NULL)) {
 	        this->size = 0;
 	    }
@@ -28,6 +28,7 @@ public:
 	}
 
 	SparseRow(const SparseRow& other) {
+		printf("SparseRowCopy\n");
 	    this->size = other.size;
 	    this->values = (MatrixType*)malloc(size * sizeof(MatrixType));
 	    this->index = (int*)malloc(size * sizeof(MatrixType));
@@ -40,8 +41,8 @@ public:
 
 	virtual ~SparseRow() {
 		if (size > 0) {
-			free(this->values);
-			free(this->index);
+			//free(this->values);
+			//free(this->index);
 		}
 	}
 
@@ -138,14 +139,27 @@ public:
 	}
 
 	/**
+	 * Gets the number of values stored in the sparseRow
+	 */
+	virtual int getCnt() {
+		for (int i = 0; i < size; i++) {
+			if (index[i] == -1) {
+				return i;
+			}	
+		}
+		return size;
+	}
+
+	/**
 	 * This does a deep copy of sparse row.
 	 */
 	SparseRow& operator=(SparseRow& other) {
+		printf("Sparse Row =\n");
 	    this->size = other.size;
 	    this->values = (MatrixType*)malloc(size * sizeof(MatrixType));
 	    this->index = (int*)malloc(size * sizeof(MatrixType));
 	    for (int i = 0; i < this->size; i++) {
-	        this->index[i] = other.index[i];
+	    	this->index[i] = other.index[i];
 	        this->values[i] = other.values[i];
 	    }
 	    this->loc = 0;

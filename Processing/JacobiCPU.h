@@ -1,9 +1,10 @@
 #pragma once
 #include "../Communication/Thread.h"
 #include "../Matrix/Matrix.h"
+#include "../Util/Timer.h"
 
 #define SYNC
-#define PROCS 11
+#define PROCS 1
 
 class JacobiCPU : public Thread {
 public:
@@ -110,4 +111,9 @@ private:
 	int size;
 	bool iterFlag;
 	Message send;
+
+    // Added for timing support
+    Timer* iterCt;
+    Timer* sendCt;
+
 };
