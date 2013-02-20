@@ -16,11 +16,19 @@ public:
 		this->name = name;
 		runningTime = 0;
 		count = 0;
+		displayed = false;
 	}
 
 	~Timer() {
+		if (!displayed) {
+			display();
+		}
+	}
+
+	void display() {
 		double ave = runningTime / count;
 		printf("%s Timer Report: \n\tCalled %g Times\n\tTook %gs on Ave\n\tTook %gs Total\n", name, (double)count, ave, runningTime);
+		displayed = true;
 	}
 
 	void start() {
@@ -39,6 +47,7 @@ public:
 	}
 
 private:
+	bool displayed;
 	long long count;
 	double time1;
 	double time2;

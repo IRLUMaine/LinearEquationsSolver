@@ -9,10 +9,10 @@
 #include "Processing/ResidualCalculator.h"
 #include "Util/Timer.h"
 
-#define Solver JacobiGPU
+#define Solver JacobiCPU
 
 using namespace std;
-#define COMPLETE_THRESHOLD 1
+#define COMPLETE_THRESHOLD 5
 //5
 
 #define ROW 301
@@ -24,7 +24,8 @@ int main(int argc, char * argv[])
 	Timer comp("Computation");
 	setup.start();
 	// Produce some classes
-	FastookReader reader("matrix.file");
+  FastookReader reader("testMatrix");
+//	FastookReader reader("matrix.file");
 	Solver jacobiSolver[PROCS];
 	//Distributor distributor[PROCS];
 	Mailbox collection[PROCS];
@@ -51,7 +52,7 @@ int main(int argc, char * argv[])
 	MatrixRow** rows[PROCS];
 	int* rowInd[PROCS];
 	int height = reader.getA()->getHeight();
-	int size = height/PROCS;
+	int size = height/PROCS + 1;
 	ResidualCalculator res(reader.getA(), reader.getB(), reader.getX());
 
 	// Allocate memory for row pointer storage
@@ -67,11 +68,13 @@ int main(int argc, char * argv[])
 			perror("Unable to Allocate Memory!");
 			return 1;
 		}
+/*
 		for (int j = 0; j < i; j++) {
 			list[i][j] = &jacobiSolver[j].mailbox;
 		}
-		for (int j = i+1; j < PROCS; j++) {
-			list[i][j-1] = &jacobiSolver[j].mailbox;
+*/
+		for (int j = 0; j < PROCS-1; j++) {
+			list[i][j] = &jacobiSolver[(j + i + 1) % PROCS].mailbox;
 		}
 		//list[i][PROCS-1] = &res.mailbox;
 		list[i][PROCS-1] = NULL;
@@ -103,8 +106,9 @@ int main(int argc, char * argv[])
 				break;
 			}
 		}
+
 		jacobiSolver[i].setControl(list[i], collection+i, rows[i], reader.getB(), rowInd[i], j, height, i);
-		jacobiSolver[i].setMaxIter(14);
+		jacobiSolver[i].setMaxIter(5);
 	}
 
 	// Start all threads
@@ -125,8 +129,10 @@ int main(int argc, char * argv[])
 						// Wait a little bit after completion to make sure all are really done
 						// counting to some number solves this
 						completeFlags[buf[0]]++;
+                        printf("Got Status Done %d\n", i);
 					} else {
 						completeFlags[buf[0]] = 0;
+                        printf("Got Status Undone %d\n", i);
 					}
 					done = true;
 					for (int i = 0; i < PROCS; i++) {
@@ -148,6 +154,8 @@ int main(int argc, char * argv[])
 	printf("Stopping threads\n");
 	for (int i = 0; i < PROCS; i++) {
 		jacobiSolver[i].setRunning(false);
+	}
+	for (int i = 0; i < PROCS; i++) {
 		jacobiSolver[i].stop();
 	}
 	res.mRun = false;
@@ -155,7 +163,7 @@ int main(int argc, char * argv[])
 	//res.stop();
 	// Print some results.
 	for (int j = 0; j < PROCS; j++) {
-		for (int i = 0; i < size; i++) {
+		for (int i = 0; i < jacobiSolver[j].getSize(); i++) {
 			fprintf(file, "%lf\n", jacobiSolver[j].getX()[i + j * (size)]);
 		}
 	}

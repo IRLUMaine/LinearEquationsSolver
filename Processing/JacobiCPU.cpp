@@ -103,9 +103,9 @@ void JacobiCPU::run() {
 
 	while (mRun) {
 		receive = false;
-		iterFlag = true;
-		for (int i = 0; (i < maxIter) && iterFlag; i++) {
-			iterFlag = false;
+		iterFlag = false;
+		for (int i = 0; (i < maxIter); i++) {
+			convCheck = i == 0;
 			iterCt->start();
 			procIter();
 			iterCt->stop();
@@ -227,7 +227,8 @@ void JacobiCPU::procIter() {
 		} while (row->next());
 		newVal[i] /= row->getValue(current);
 
-		if (fabs(x[current] - newVal[i]) > (RTHRESHOLD * fabs(x[i]) + THRESHOLD)) {
+		if (convCheck && !iterFlag && (fabs(x[current] - newVal[i]) > (RTHRESHOLD * fabs(x[i]) + THRESHOLD))) {
+            printf("N %d %d: %g\n", i, current, fabs(x[current] - newVal[i]));
 			iterFlag = true;
 		}
 	}

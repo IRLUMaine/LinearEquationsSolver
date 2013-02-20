@@ -13,7 +13,7 @@ OBJS=$(patsubst %.cu,$(OBJDIR)/%CU.o,$(OBJS1))
 BUILDDIR= objs/Matrix\
 		  objs/Communication\
 		  objs/Processing
-CFLAGS=-O3 #-Wall
+CFLAGS=-g# --ptxas-options=-v #-Wall
 NFLAGS=$(CFLAGS) -arch sm_20
 LIBS=-lpthread -lrt
 NVCC=nvcc

@@ -4,7 +4,7 @@
 #include "../Util/Timer.h"
 
 #define SYNC
-#define PROCS 1
+#define PROCS 4
 
 class JacobiCPU : public Thread {
 public:
@@ -68,6 +68,10 @@ public:
 		return x;
 	}
 
+	int getSize() {
+		return num;
+	}
+
 private:
 	/**
 	 * This will be called after the maximum number of iterations
@@ -110,6 +114,7 @@ private:
 	int *rowInd;
 	int size;
 	bool iterFlag;
+    bool convCheck;
 	Message send;
 
     // Added for timing support

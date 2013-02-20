@@ -72,6 +72,10 @@ public:
 		return x;
 	}
 
+	int getSize() {
+		return num;
+	}
+
 private:
 	/**
 	 * This will be called after the maximum number of iterations
@@ -97,6 +101,8 @@ private:
 	 * update x with the new values.
 	 */
 	void procIter();
+
+	void setup();
 
 	int num;
 	bool mRun;
@@ -124,6 +130,8 @@ private:
 	int *dIndexs;
 	MatrixType *dRowVals;
 	int *dRowInds;
+	MatrixType *dRowVRearr;
+	int *dRowIRearr;
 	MatrixType *dYs;
 	int *dDiffs;
 	int *hDiffs;
