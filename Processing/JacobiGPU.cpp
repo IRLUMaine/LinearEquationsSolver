@@ -21,8 +21,8 @@ void rearrangeCall(int id, int varPBlock, int maxRow, int num, int size,
 		int *dRowIRearr, MatrixType *dYs, int* dDiffs);
 
 JacobiGPU::JacobiGPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows,
-		Matrix* b, int* rowInd, int num, int size, int id) {
-	setControl(distribution, master, rows, b, rowInd, num, size, id);
+		Matrix* b, int* rowInd, int num, int size, int id, int nProcs) {
+	setControl(distribution, master, rows, b, rowInd, num, size, id, nProcs);
 }
 
 JacobiGPU::JacobiGPU() {
@@ -40,7 +40,7 @@ JacobiGPU::~JacobiGPU() {
  * This is allows for array allocation
  */
 void JacobiGPU::setControl(Mailbox** distribution, Mailbox *master,
-		MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
+		MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id, int nProcs) {
 	this->rows = rows;
 	this->size = size;
 	this->rowInd = rowInd;
@@ -57,6 +57,7 @@ void JacobiGPU::setControl(Mailbox** distribution, Mailbox *master,
 	this->varPBlock = 1024;
 	this->iterCt = new Timer("Iter");
 	this->sendCt = new Timer("Send");
+    this->nProcs = nProcs;
 }
 
 void JacobiGPU::setup() {
@@ -187,7 +188,7 @@ void JacobiGPU::run() {
 		sendData();
 		sendCt->stop();
 		readCt = 0;
-		while (mRun && readCt < (PROCS - 1))
+		while (mRun && readCt < (nProcs - 1))
 			readData();
 	}
 	cudaSafe(cudaMemcpy(x+rowInd[0], dXs+rowInd[0], sizeof(MatrixType) * num, cudaMemcpyDeviceToHost),

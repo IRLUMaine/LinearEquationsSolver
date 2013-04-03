@@ -12,7 +12,7 @@
 
 class JacobiGPU : public Thread {
 public:
-	JacobiGPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, Matrix *b, int* rowInd, int num, int size, int id);
+	JacobiGPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, Matrix *b, int* rowInd, int num, int size, int id, int nProcs);
 	JacobiGPU();
 
 	~JacobiGPU();
@@ -20,7 +20,7 @@ public:
 	/**
 	 * This is allows for array allocation
 	 */
-	void setControl(Mailbox** distributor, Mailbox* master, MatrixRow** rows, Matrix *b, int* rowInd, int num, int size, int id);
+	void setControl(Mailbox** distributor, Mailbox* master, MatrixRow** rows, Matrix *b, int* rowInd, int num, int size, int id, int nProcs);
 
 	/**
 	 * @Override
@@ -75,6 +75,9 @@ public:
 	int getSize() {
 		return num;
 	}
+
+protected:
+    int nProcs;
 
 private:
 	/**

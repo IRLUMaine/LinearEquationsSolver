@@ -6,13 +6,15 @@
  */
 #include "JacobiCPU.h"
 #include <sys/time.h>
+#include <iostream>
+#include <sstream>
 
 #include "../Matrix/SparseRow.h"
 
-#define RTHRESHOLD .001
-#define THRESHOLD .001
+#define RTHRESHOLD .00001
+#define THRESHOLD .00001
 
-JacobiCPU::JacobiCPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
+JacobiCPU::JacobiCPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id, int nProcs) {
 	this->rows = rows;
 	this->size = size;
 	this->rowInd = rowInd;
@@ -28,6 +30,7 @@ JacobiCPU::JacobiCPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, 
 	this->intBuf = new int[2];
     this->iterCt = new Timer("Iter");
     this->sendCt = new Timer("Send");
+    this->nProcs = nProcs;
 
 	if (!this->x) {
 		perror("Problem allocating Solution Space or Send Buffer");
@@ -37,7 +40,7 @@ JacobiCPU::JacobiCPU(Mailbox** distribution, Mailbox* master, MatrixRow** rows, 
 	}
 
 	for (int i = 0; i < size; i++) {
-		this->x[i] = 1;
+		this->x[i] = 0;
 	}
 }
 
@@ -55,7 +58,7 @@ JacobiCPU::~JacobiCPU() {
 /**
  * This is allows for array allocation
  */
-void JacobiCPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id) {
+void JacobiCPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** rows, Matrix* b, int* rowInd, int num, int size, int id, int nProcs) {
 	this->rows = rows;
 	this->size = size;
 	this->rowInd = rowInd;
@@ -71,6 +74,7 @@ void JacobiCPU::setControl(Mailbox** distribution, Mailbox *master, MatrixRow** 
 	this->intBuf = new int[2];
     this->iterCt = new Timer("Iter");
     this->sendCt = new Timer("Send");
+    this->nProcs = nProcs;
 
 
 
@@ -114,7 +118,7 @@ void JacobiCPU::run() {
 		sendData();
 		sendCt->stop();
 		readCt = 0;
-		while (mRun && readCt < (PROCS-1)) readData();
+		while (mRun && readCt < (nProcs-1)) readData();
 	}
     gettimeofday(&t, NULL);
     time2 = t.tv_sec + (t.tv_usec / 1000000.0);
@@ -215,20 +219,26 @@ void JacobiCPU::procIter() {
 	int i, j;
 	MatrixType newVal[num];
 	for (i = 0; i < num; i++) {
+//        std::stringstream ss;
 		current = rowInd[i];
 		SparseRow* row = dynamic_cast<SparseRow*>(rows[i]);
 		row->reset();
 		newVal[i] = b->getVal(current, 0);
+//        ss << "b=" << newVal[i];
 		do {
 			j = row->getIndex();
 			if (j != current) {
 				newVal[i] -= row->getValue() * x[j];
+//                ss << ",nv=" << newVal[i];
 			}
 		} while (row->next());
+//        ss << ",row[cur]=" << row->getValue(current);
 		newVal[i] /= row->getValue(current);
+//        ss << ",nv=" << newVal[i];
 
-		if (convCheck && !iterFlag && (fabs(x[current] - newVal[i]) > (RTHRESHOLD * fabs(x[i]) + THRESHOLD))) {
-            printf("N %d %d: %g\n", i, current, fabs(x[current] - newVal[i]));
+		if (convCheck && !iterFlag && (fabs(x[current] - newVal[i]) > (RTHRESHOLD * fabs(x[current]) + THRESHOLD))) {
+//            std::cout << ss.str() << std::endl;
+//            printf("N %d %d: %g %g %g\n", i, current, fabs(x[current] - newVal[i]), x[current], newVal[i]);
 			iterFlag = true;
 		}
 	}

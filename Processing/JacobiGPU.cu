@@ -2,10 +2,10 @@
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 
-#define RTHRESHOLD .0001
-#define THRESHOLD .0001
+#define RTHRESHOLD .00001
+#define THRESHOLD .00001
 
-//#define FINDEX
+#define FINDEX
 
 #define DISP 50001
 //126976
@@ -256,11 +256,11 @@ __global__ void computeIter(int gid, int maxRow, int num, int iter,
 		int flag;
 
 		// search for statics / dynamics
-		for (j = 0; (j < maxRow) && (dRowI[j] != -1); j++) {
+		for (j = 0; (j < maxRow) && (dRowI[j] != -1); ++j) {
 			temp = dRowI[j];
 			if (temp != ind) {
 				flag = 1;
-				for (i = 0; i < 1024; i++) {
+				for (i = 0; i < 1024; ++i) {
 					if (temp == inds[i]) {
 						flag = 0;
 						localCoeff[ct] = dRowV[j];
@@ -281,7 +281,7 @@ __global__ void computeIter(int gid, int maxRow, int num, int iter,
 		// last iteration need to store the diffs for convergence
 		// checking
 		tempF = staticVar1;
-		for (j = 0; localIndex[j] != -1; j++) {
+		for (j = 0; localIndex[j] != -1; ++j) {
 			tempF -= localCoeff[j] * x[localIndex[j]];
 		}
 		tempF /= staticVar0;
@@ -297,7 +297,7 @@ __global__ void computeIter(int gid, int maxRow, int num, int iter,
 		// first time requires diff calcs
 		for (i = 1; i < iter; i++) {
 			tempF = staticVar1;
-			for (j = 0; localIndex[j] != -1; j++) {
+			for (j = 0; localIndex[j] != -1; ++j) {
 				tempF -= localCoeff[j] * x[localIndex[j]];
 			}
 			//tempF += staticVar1;
