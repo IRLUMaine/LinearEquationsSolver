@@ -23,7 +23,7 @@ int main(int argc, char * argv[])
 	setup.start();
 	// Produce some classes
   FastookReader reader("testMatrix");
-//	FastookReader reader("matrix.file");
+//    FastookReader reader("matrix.file");
 
     int nProcs = 1;
     if (argc > 1) {

@@ -5,7 +5,7 @@
 #define RTHRESHOLD .00001
 #define THRESHOLD .00001
 
-#define FINDEX
+//#define FINDEX
 
 #define DISP 50001
 //126976
