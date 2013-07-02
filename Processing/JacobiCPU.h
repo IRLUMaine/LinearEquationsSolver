@@ -5,7 +5,6 @@
 
 #define SYNC
 //#define PROCS 1
-#define Solver JacobiGPU
 
 class JacobiCPU : public Thread {
 public:

@@ -1,11 +1,10 @@
 #include <stdio.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
+#include "../defs.h"
 
 #define RTHRESHOLD .00001
 #define THRESHOLD .00001
-
-//#define FINDEX
 
 #define DISP 50001
 //126976
@@ -14,7 +13,6 @@
 //#define single(x) if (loc == DISP) x
 #define single(x)
 
-typedef float MatrixType;
 __global__ void computeIter(int id, int maxRow, int num, int iter,
 		MatrixType *dXs, MatrixType *dNextXs, int *dIndexs,
 		MatrixType *dRowVals, int *dRowInds, MatrixType *dYs, int *dDiffs);

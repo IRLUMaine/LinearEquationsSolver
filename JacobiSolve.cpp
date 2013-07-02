@@ -1,4 +1,5 @@
 #include <iostream>
+#include <getopt.h>
 #include "Matrix/Matrix.h"
 #include "Matrix/FastookReader.h"
 #include "Communication/Thread.h"
@@ -13,22 +14,70 @@ using namespace std;
 #define COMPLETE_THRESHOLD 5
 //5
 
-#define ROW 301
-#define COL 561
+//#define ROW 301
+//#define COL 561
+
+#define Solver	JacobiGPU
+
+const char* optString = "o:i:n:";
+
+string defaultOutput = "output";
+
+static const struct option longOpts[] = {
+	{ "output", required_argument, NULL, 'o' },
+	{ "input", required_argument, NULL, 'i' },
+	{ "nProcs", required_argument, NULL, 'a' },
+};
 
 int main(int argc, char * argv[])
 {
+    int nProcs = 1;
+
+	bool inputFlag = false;
+	bool nProcsFlag = false;
+	bool outputFlag = false;
+
+	string outputFileName;
+	string inputFileName;
+
+	int longIndex;
+	int opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
+
+	outputFileName = defaultOutput;
+
+	while (opt != -1) {
+		switch (opt) {
+		case 'i':
+			inputFlag = true;
+			inputFileName = optarg;
+			break;
+		case 'o':
+			outputFlag = true;
+			outputFileName = optarg;
+			break;
+		case 'n':
+			nProcsFlag = true;
+			nProcs = atoi(optarg);
+		}
+
+		opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
+	}
+
+	if (!inputFlag) {
+		cout << "Error: Requires input file to operate on."  << endl;
+		return -1;
+	}
+
 	Timer setup("Read");
 	Timer comp("Computation");
 	setup.start();
 	// Produce some classes
-  FastookReader reader("testMatrix");
-//    FastookReader reader("matrix.file");
+	FastookReader reader(inputFileName.c_str());
+//	FastookReader reader("testMatrix");
+//	FastookReader reader("matrix.file");
 
-    int nProcs = 1;
-    if (argc > 1) {
-        nProcs = atoi(argv[1]);
-    }
+
+
 	Solver* jacobiSolver = new Solver[nProcs];
 	//Distributor distributor[nProcs];
 	Mailbox* collection = new Mailbox[nProcs];
@@ -40,11 +89,7 @@ int main(int argc, char * argv[])
 	int* completeFlags = new int[nProcs];
 	bool done = false;
 
-	if (argc > 1) {
-		file = fopen(argv[1], "w");
-	} else {
-		file = fopen("output", "w");
-	}
+	file = fopen(outputFileName.c_str(), "w");
 
 	// Setup which distributor controls which thread
 	// When PROC=1 these do essentially nothing
